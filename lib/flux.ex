@@ -14,7 +14,7 @@ defmodule Flux do
   Flux is designed for applications that need to:
 
     * define assets as plain Elixir functions
-    * attach documentation and metadata directly to those assets
+    * attach documentation and metadata directly to those assets through @asset annotations
     * declare dependencies between assets
     * inspect assets and their relationships at runtime
     * execute one asset or a dependency-derived workflow
@@ -28,8 +28,8 @@ defmodule Flux do
   An asset is a function that represents a meaningful unit of work in a workflow, such as
   extracting data, transforming a dataset, or producing a modeled output.
 
-  Assets are authored in modules that `use Flux.Assets`. At compile time, Flux collects
-  metadata such as:
+  Assets are intended to be authored in modules that `use Flux.Assets`. At compile time,
+  Flux will collect metadata such as:
 
     * asset name
     * documentation
@@ -169,71 +169,51 @@ defmodule Flux do
 
   ## Status
 
-  Flux currently has the foundations for asset definition and compile-time metadata collection,
-  but the full orchestration runtime is still being built.
+  Flux is currently being rebuilt from the asset authoring layer upward.
 
   The current direction is:
 
-    * asset metadata is collected at compile time
+    * `Flux` defines the intended public API first
+    * asset authoring and compile-time metadata collection are the first implementation milestone
     * dependencies declared by assets will define the execution graph
-    * `Flux` will expose a stable orchestrator-facing API
-    * runtime execution, eventing, and storage are implemented underneath that API
+    * runtime execution, eventing, and storage will be implemented underneath that API
 
   This module therefore acts as both:
 
     * the public contract for users of the library
     * the roadmap boundary for what still needs to be implemented underneath
 
+  The first concrete deliverable is intentionally small: define assets, inspect assets for a
+  module, and fetch a single asset by canonical reference before building registry, planning,
+  and runtime layers.
+
   ## Roadmap
 
   The planned implementation work is roughly:
 
-    1. canonical asset references
-    2. asset registry and discovery
-    3. dependency graph construction
-    4. execution planning
-    5. run execution
-    6. run storage and retrieval
-    7. live run event subscriptions
+    1. asset authoring DSL with `use Flux.Assets` and `@asset`
+    2. canonical asset metadata and asset references
+    3. per-module asset introspection
+    4. global registry and asset discovery
+    5. dependency resolution and graph construction
+    6. execution planning
+    7. run model and in-memory execution
+    8. run storage and retrieval
+    9. live run event subscriptions
 
-  More concretely, the supporting modules are expected to include:
-
-    * `Flux.Ref`
-    * `Flux.Registry`
-    * `Flux.Graph`
-    * `Flux.Plan`
-    * `Flux.Planner`
-    * `Flux.Run`
-    * `Flux.Executor`
-    * `Flux.Runner`
-    * `Flux.Events`
-    * `Flux.Storage`
-
-  ## TODO summary
-
-  The main work left to implement behind this public API is:
-
-    * discover and register asset modules globally
-    * resolve canonical asset references
-    * build dependency graphs across modules
-    * compute execution order from dependencies
-    * create and persist run state
-    * execute assets with dependency outputs as inputs
-    * emit structured lifecycle and log events
-    * support subscriptions for live run updates
-
-  Until those modules are implemented, the functions in this module should be treated as API
-  placeholders with stable intent but incomplete runtime behavior.
   """
 
   @typedoc """
   Canonical reference to an asset.
 
-  The public API should consistently use `{module, asset_name}` references,
-  even if authoring-time dependency declarations may support shorter local
-  forms such as `:asset_name`.
+  The public API should consistently use `{module, asset_name}` references.
   """
-  @type asset_ref :: {module(), atom()}
+  @type asset_ref :: Flux.Ref.t()
+
+  @typedoc """
+  Canonical asset metadata returned by Flux inspection APIs.
+  """
+  @type asset :: Flux.Asset.t()
 
   @typedoc """
   Identifier for a single run.
@@ -279,12 +259,13 @@ defmodule Flux do
 
   ## TODO
 
-    * Implement global asset discovery through `Flux.Registry`
+    * Implement after `Flux.Assets` and per-module introspection exist
+    * Delegate to `Flux.Registry` once global discovery is introduced
     * Decide how asset modules are registered or discovered
     * Define stable ordering for returned assets
     * Consider filtering and pagination later
   """
-  @spec list_assets() :: [term()]
+  @spec list_assets() :: [asset()]
   def list_assets do
     todo!("Flux.list_assets/0")
   end
@@ -302,11 +283,12 @@ defmodule Flux do
 
   ## TODO
 
-    * Delegate to `Flux.Registry.assets/1`
+    * Make this part of the first implementation milestone
+    * Delegate to module-level introspection exposed by `use Flux.Assets`
     * Validate that the given module is a Flux asset module
     * Return a useful error for unknown modules
   """
-  @spec list_assets(module()) :: [term()]
+  @spec list_assets(module()) :: [asset()]
   def list_assets(module) when is_atom(module) do
     _ = module
     todo!("Flux.list_assets/1")
@@ -326,11 +308,12 @@ defmodule Flux do
 
   ## TODO
 
-    * Delegate to `Flux.Registry.asset/1`
+    * Make this part of the first implementation milestone
+    * Resolve through module-level asset metadata before introducing a global registry
     * Decide whether missing assets return `nil` or `{:error, reason}`
     * Keep the public return shape stable for UI consumers
   """
-  @spec get_asset(asset_ref()) :: term()
+  @spec get_asset(asset_ref()) :: asset() | nil | {:error, term()}
   def get_asset({module, name}) when is_atom(module) and is_atom(name) do
     todo!("Flux.get_asset/1")
   end
@@ -360,6 +343,7 @@ defmodule Flux do
 
   ## TODO
 
+    * Implement after asset authoring, introspection, and dependency graph construction exist
     * Delegate to `Flux.Runner.run/2`
     * Define the return contract, likely `{:ok, run}` or `{:error, reason}`
     * Support `dependencies: :all | :none` first
@@ -384,6 +368,7 @@ defmodule Flux do
 
   ## TODO
 
+    * Implement after the run model and runner exist
     * Delegate to `Flux.Storage` or a dedicated run store
     * Define the canonical run shape
     * Decide how much execution detail belongs in the run record itself
@@ -410,6 +395,7 @@ defmodule Flux do
 
   ## TODO
 
+    * Implement after the run model and storage layer exist
     * Delegate to `Flux.Storage`
     * Define default ordering, likely newest first
     * Consider pagination rather than large unbounded lists
@@ -434,6 +420,7 @@ defmodule Flux do
 
   ## TODO
 
+    * Implement after run execution exists
     * Delegate to `Flux.Events`
     * Decide whether to use Phoenix.PubSub directly or hide it behind an adapter
     * Define the event envelope and topic naming convention
@@ -455,6 +442,7 @@ defmodule Flux do
 
   ## TODO
 
+    * Implement after run execution exists
     * Delegate to `Flux.Events`
     * Mirror the behavior and return contract of `subscribe_run/1`
   """
