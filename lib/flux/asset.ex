@@ -33,6 +33,8 @@ defmodule Flux.Asset do
           depends_on: [Ref.t()]
         }
 
+  @valid_kinds [:materialized, :view, :ephemeral]
+
   defstruct [
     :module,
     :name,
@@ -45,4 +47,8 @@ defmodule Flux.Asset do
     tags: [],
     depends_on: []
   ]
+
+  @doc false
+  @spec valid_kinds() :: [kind()]
+  def valid_kinds, do: @valid_kinds
 end

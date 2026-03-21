@@ -84,7 +84,7 @@ defmodule Flux do
         use Flux.Assets
 
         @doc "Extract raw orders from the sales source"
-        @asset
+        @asset []
         def extract_orders do
           [%{id: 1, total: 100}]
         end
@@ -174,7 +174,7 @@ defmodule Flux do
   The current direction is:
 
     * `Flux` defines the intended public API first
-    * asset authoring and compile-time metadata collection are the first implementation milestone
+    * asset authoring and compile-time metadata collection now back module-level inspection APIs
     * dependencies declared by assets will define the execution graph
     * runtime execution, eventing, and storage will be implemented underneath that API
 
@@ -183,17 +183,17 @@ defmodule Flux do
     * the public contract for users of the library
     * the roadmap boundary for what still needs to be implemented underneath
 
-  The first concrete deliverable is intentionally small: define assets, inspect assets for a
-  module, and fetch a single asset by canonical reference before building registry, planning,
-  and runtime layers.
+  The first concrete deliverable is intentionally small and now available: define assets,
+  inspect assets for a module, and fetch a single asset by canonical reference before building
+  registry, planning, and runtime layers.
 
   ## Roadmap
 
   The planned implementation work is roughly:
 
-    1. asset authoring DSL with `use Flux.Assets` and `@asset`
-    2. canonical asset metadata and asset references
-    3. per-module asset introspection
+    1. asset authoring DSL with `use Flux.Assets` and `@asset` - done
+    2. canonical asset metadata and asset references - done
+    3. per-module asset introspection - done
     4. global registry and asset discovery
     5. dependency resolution and graph construction
     6. execution planning
@@ -214,6 +214,11 @@ defmodule Flux do
   Canonical asset metadata returned by Flux inspection APIs.
   """
   @type asset :: Flux.Asset.t()
+
+  @typedoc """
+  Asset inspection errors returned by lookup APIs.
+  """
+  @type asset_error :: :not_asset_module | :asset_not_found
 
   @typedoc """
   Identifier for a single run.
@@ -278,20 +283,17 @@ defmodule Flux do
 
   ## Examples
 
-      iex> Flux.list_assets(MyApp.SalesETL)
-      ** (RuntimeError) TODO: implement Flux.list_assets/1
+      iex> Flux.list_assets(Unknown.Module)
+      {:error, :not_asset_module}
 
   ## TODO
 
-    * Make this part of the first implementation milestone
-    * Delegate to module-level introspection exposed by `use Flux.Assets`
-    * Validate that the given module is a Flux asset module
-    * Return a useful error for unknown modules
+    * Keep this backed by module-level introspection until the global registry exists
+    * Consider whether richer filtering belongs here or in a registry layer later
   """
-  @spec list_assets(module()) :: [asset()]
+  @spec list_assets(module()) :: {:ok, [asset()]} | {:error, asset_error()}
   def list_assets(module) when is_atom(module) do
-    _ = module
-    todo!("Flux.list_assets/1")
+    Flux.Assets.list_assets(module)
   end
 
   @doc """
@@ -303,19 +305,17 @@ defmodule Flux do
 
   ## Examples
 
-      iex> Flux.get_asset({MyApp.SalesETL, :normalize_orders})
-      ** (RuntimeError) TODO: implement Flux.get_asset/1
+      iex> Flux.get_asset({Unknown.Module, :normalize_orders})
+      {:error, :not_asset_module}
 
   ## TODO
 
-    * Make this part of the first implementation milestone
-    * Resolve through module-level asset metadata before introducing a global registry
-    * Decide whether missing assets return `nil` or `{:error, reason}`
-    * Keep the public return shape stable for UI consumers
+    * Keep this backed by module-level asset metadata until the global registry exists
+    * Revisit whether lookup by canonical ref should hit a registry once global discovery lands
   """
-  @spec get_asset(asset_ref()) :: asset() | nil | {:error, term()}
+  @spec get_asset(asset_ref()) :: {:ok, asset()} | {:error, asset_error()}
   def get_asset({module, name}) when is_atom(module) and is_atom(name) do
-    todo!("Flux.get_asset/1")
+    Flux.Assets.get_asset(module, name)
   end
 
   @doc """
