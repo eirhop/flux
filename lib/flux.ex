@@ -84,7 +84,7 @@ defmodule Flux do
         use Flux.Assets
 
         @doc "Extract raw orders from the sales source"
-        @asset []
+        @asset true
         def extract_orders do
           [%{id: 1, total: 100}]
         end

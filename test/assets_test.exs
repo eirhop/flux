@@ -2,7 +2,7 @@ defmodule Flux.AssetsTest.Upstream do
   use Flux.Assets
 
   @doc "Load source rows"
-  @asset []
+  @asset true
   def source_rows, do: [%{id: 1, total: 100}]
 end
 
@@ -12,7 +12,7 @@ defmodule Flux.AssetsTest.Sample do
   alias Flux.AssetsTest.Upstream
 
   @doc "Extract raw orders"
-  @asset []
+  @asset true
   def extract_orders, do: [%{id: 1, total: 100}]
 
   @doc "Normalize extracted orders"
@@ -30,8 +30,12 @@ defmodule Flux.AssetsTest do
   alias Flux.Asset
   alias Flux.Assets
 
+  require Logger
+
   test "captures canonical asset metadata in source order" do
     assert {:ok, assets} = Assets.list_assets(Flux.AssetsTest.Sample)
+
+    Logger.debug("module assets: #{inspect(assets, pretty: true)}")
 
     assert Enum.map(assets, & &1.name) == [:extract_orders, :normalize_orders, :fact_sales]
 
@@ -58,6 +62,9 @@ defmodule Flux.AssetsTest do
 
   test "fetches a single asset by name" do
     assert {:ok, %Asset{} = asset} = Assets.get_asset(Flux.AssetsTest.Sample, :normalize_orders)
+
+    Logger.debug("looked up asset: #{inspect(asset, pretty: true)}")
+
     assert asset.name == :normalize_orders
 
     assert {:error, :asset_not_found} = Assets.get_asset(Flux.AssetsTest.Sample, :missing)
@@ -65,11 +72,17 @@ defmodule Flux.AssetsTest do
   end
 
   test "reports whether a module is an asset module" do
+    Logger.debug(
+      "asset module? sample=#{inspect(Assets.asset_module?(Flux.AssetsTest.Sample))} enum=#{inspect(Assets.asset_module?(Enum))}"
+    )
+
     assert Assets.asset_module?(Flux.AssetsTest.Sample)
     refute Assets.asset_module?(Enum)
   end
 
   test "rejects invalid asset declarations at compile time" do
+    Logger.info("compiling invalid asset declarations to verify compile-time validation")
+
     assert_raise CompileError, ~r/invalid asset kind/, fn ->
       compile_test_module("""
       use Flux.Assets
@@ -101,10 +114,10 @@ defmodule Flux.AssetsTest do
       compile_test_module("""
       use Flux.Assets
 
-      @asset []
+      @asset true
       def duplicate, do: :ok
 
-      @asset []
+      @asset true
       def duplicate(value), do: value
       """)
     end
@@ -113,7 +126,7 @@ defmodule Flux.AssetsTest do
       compile_test_module("""
       use Flux.Assets
 
-      @asset []
+      @asset true
       defp private_asset, do: :ok
       """)
     end
@@ -122,7 +135,7 @@ defmodule Flux.AssetsTest do
       compile_test_module("""
       use Flux.Assets
 
-      @asset []
+      @asset true
       """)
     end
   end

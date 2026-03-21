@@ -3,8 +3,13 @@ defmodule Flux.RefTest do
 
   alias Flux.Ref
 
+  require Logger
+
   test "builds a canonical ref" do
-    assert Ref.new(Example.Assets, :normalize_orders) ==
-             {Example.Assets, :normalize_orders}
+    ref = Ref.new(Example.Assets, :normalize_orders)
+
+    Logger.debug("built ref: #{inspect(ref)}")
+
+    assert ref == {Example.Assets, :normalize_orders}
   end
 end

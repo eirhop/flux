@@ -8,3 +8,5 @@ Natural next steps:
 1. Implement dependency existence/graph construction on top of __flux_assets__/0
 2. Add a registry layer for Flux.list_assets/0
 3. Add richer asset validation rules once cross-module planning starts
+
+If you want, I can do the next step and start the dependency graph layer on top of the new Flux.Assets metadata.
