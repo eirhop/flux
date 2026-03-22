@@ -35,4 +35,9 @@ defmodule FluxTest do
     assert {:error, :asset_not_found} = Flux.get_asset({SampleAssets, :missing})
     assert {:error, :not_asset_module} = Flux.get_asset({Enum, :map})
   end
+
+  test "reports whether a module exposes Flux asset metadata" do
+    assert Flux.asset_module?(SampleAssets)
+    refute Flux.asset_module?(Enum)
+  end
 end
