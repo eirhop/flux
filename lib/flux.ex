@@ -139,6 +139,85 @@ defmodule Flux do
 
       Flux.subscribe_run(run_id)
 
+  ## Setup in a host application
+
+  Flux is an OTP application, not a standalone server you start with a
+  dedicated `flux` command.
+
+  A consumer application typically sets Flux up in four steps:
+
+    1. add `:flux` as a dependency in `mix.exs`
+    2. define one or more asset modules with `use Flux.Assets`
+    3. register those modules under `config :flux, asset_modules: [...]`
+    4. start the host application normally
+
+  Flux is not published on Hex yet, so today it should be installed directly
+  from the repository. A minimal dependency declaration looks like this:
+
+      defp deps do
+        [
+          {:flux, git: "https://github.com/eirhop/flux.git", branch: "main"}
+        ]
+      end
+
+  Once Hex publishing exists, the dependency can move to a normal versioned
+  package declaration:
+
+      defp deps do
+        [
+          {:flux, "~> 0.1.0"}
+        ]
+      end
+
+  Asset modules usually live in the host application's normal source tree,
+  for example under `lib/my_app/`.
+
+  Once those modules exist, register them in the host application's config.
+  For most projects that means `config/config.exs`, optionally overridden from
+  environment-specific files such as `config/dev.exs`, `config/test.exs`, or
+  `config/runtime.exs` if the application needs environment-dependent module
+  lists.
+
+      import Config
+
+      config :flux,
+        asset_modules: [
+          MyApp.SalesETL,
+          MyApp.GoldETL
+        ]
+
+  The configured module list is the global discovery scope used by
+  `Flux.list_assets/0` and `Flux.get_asset/1`.
+
+  ## Starting Flux
+
+  There is no separate Flux server process that operators start manually.
+
+  When the host application boots, Mix starts the `:flux` application as a
+  dependency, and `Flux.Application` loads the configured asset registry during
+  application startup.
+
+  In practice, that means the right startup command is the normal startup
+  command for the host application:
+
+    * `iex -S mix` for interactive local development
+    * `mix run --no-halt` for a long-running non-interactive OTP process
+    * framework-specific commands such as `mix phx.server` when Flux is used
+      inside a Phoenix application
+
+  If the host application is already running under releases, supervision, or a
+  framework entrypoint, Flux starts automatically as part of that boot process.
+
+  ## Configuration lifecycle
+
+  The global asset registry is loaded from application config during startup and
+  then kept in memory for fast lookups.
+
+  That means changes to `config :flux, asset_modules: [...]` are not picked up
+  automatically by an already-running node. In normal usage, update the config
+  and restart the host application so Flux reloads the configured registry
+  during boot.
+
   ## Public API responsibilities
 
   The intended user-facing responsibilities of this module are:
@@ -188,9 +267,10 @@ defmodule Flux do
   facade before building planning and runtime layers.
 
   Global asset discovery now starts from an explicit registry scope configured through
-  `config :flux, asset_modules: [...]`. Flux uses that configured module list to build a
-  global asset catalog without scanning arbitrary loaded modules in the VM, and it loads
-  that catalog into memory during application startup for fast read-heavy lookups.
+  `config :flux, asset_modules: [...]` in the host application. Flux uses that configured
+  module list to build a global asset catalog without scanning arbitrary loaded modules in
+  the VM, and it loads that catalog into memory during application startup for fast
+  read-heavy lookups.
 
   ## Roadmap
 

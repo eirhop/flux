@@ -4,8 +4,21 @@
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `flux` to your list of dependencies in `mix.exs`:
+Flux is not published on Hex yet.
+
+Install it from the GitHub repository by adding `flux` to your list of
+dependencies in `mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:flux, git: "https://github.com/eirhop/flux.git", branch: "main"}
+  ]
+end
+```
+
+Once Flux is published on Hex, the dependency can move to a normal versioned
+package declaration:
 
 ```elixir
 def deps do
