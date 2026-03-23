@@ -77,6 +77,10 @@ defmodule Flux.Assets do
 
     quote do
       @doc false
+      @spec __flux_asset_module__() :: true
+      def __flux_asset_module__, do: true
+
+      @doc false
       @spec __flux_assets__() :: [Flux.Asset.t()]
       def __flux_assets__, do: unquote(Macro.escape(assets))
     end

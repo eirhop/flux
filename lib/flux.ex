@@ -331,7 +331,9 @@ defmodule Flux do
   @doc false
   @spec asset_module?(module()) :: boolean()
   def asset_module?(module) when is_atom(module) do
-    function_exported?(module, :__flux_assets__, 0)
+    function_exported?(module, :__flux_asset_module__, 0) and
+      function_exported?(module, :__flux_assets__, 0) and
+      module.__flux_asset_module__() == true
   end
 
   @doc """
