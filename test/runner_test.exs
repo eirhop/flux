@@ -49,6 +49,9 @@ defmodule Flux.RunnerTest do
     previous_catalog = Flux.Registry.build_catalog(previous_modules || [])
 
     Application.put_env(:flux, :asset_modules, [RunnerAssets])
+    Application.put_env(:flux, :run_store, Flux.RunStore.Memory)
+    Application.put_env(:flux, :run_store_opts, [])
+    clear_memory_run_store()
     assert :ok = Flux.Registry.reload()
     assert :ok = Flux.GraphIndex.reload()
 
@@ -59,6 +62,8 @@ defmodule Flux.RunnerTest do
         Application.put_env(:flux, :asset_modules, previous_modules)
       end
 
+      Application.delete_env(:flux, :run_store)
+      Application.delete_env(:flux, :run_store_opts)
       restore_registry(previous_catalog)
     end)
 
@@ -128,6 +133,46 @@ defmodule Flux.RunnerTest do
     assert run.outputs[ref] == output
     assert run.asset_results[ref].output == output
     assert run.asset_results[ref].meta == meta
+  end
+
+  test "persists run records for get_run/1" do
+    assert {:ok, run} = Flux.run({RunnerAssets, :final})
+
+    assert {:ok, fetched} = Flux.get_run(run.id)
+    assert fetched.id == run.id
+    assert fetched.status == :ok
+    assert fetched.target_refs == run.target_refs
+  end
+
+  test "lists runs with status filter and limit in newest-first order" do
+    assert {:ok, ok_run} = Flux.run({RunnerAssets, :final})
+    assert {:error, error_run} = Flux.run({RunnerAssets, :crashes})
+
+    assert {:ok, all_runs} = Flux.list_runs()
+    assert Enum.map(all_runs, & &1.id) == [error_run.id, ok_run.id]
+
+    assert {:ok, running_runs} = Flux.list_runs(status: :running)
+    assert running_runs == []
+
+    assert {:ok, failed_runs} = Flux.list_runs(status: :error)
+    assert Enum.map(failed_runs, & &1.id) == [error_run.id]
+
+    assert {:ok, limited_runs} = Flux.list_runs(limit: 1)
+    assert Enum.map(limited_runs, & &1.id) == [error_run.id]
+  end
+
+  test "returns :not_found for missing runs" do
+    assert {:error, :not_found} = Flux.get_run("missing-run-id")
+  end
+
+  defp clear_memory_run_store do
+    table = Flux.RunStore.Memory.Table
+
+    if :ets.whereis(table) != :undefined do
+      :ets.delete_all_objects(table)
+    end
+
+    :ok
   end
 
   defp restore_registry({:ok, _catalog}) do

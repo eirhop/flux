@@ -34,12 +34,26 @@ defmodule Flux.Runner do
         params: params
       }
 
-      execute_plan(run)
+      with :ok <- Flux.Storage.put_run(run),
+           result <- execute_plan(run),
+           :ok <- persist_terminal_result(result) do
+        result
+      end
     end
   end
 
   defp validate_params(params) when is_map(params), do: :ok
   defp validate_params(_params), do: {:error, :invalid_run_params}
+
+  defp persist_terminal_result({:ok, %Run{} = run}) do
+    Flux.Storage.put_run(run)
+  end
+
+  defp persist_terminal_result({:error, %Run{} = run}) do
+    Flux.Storage.put_run(run)
+  end
+
+  defp persist_terminal_result(_result), do: :ok
 
   defp execute_plan(%Run{} = run) do
     case run.plan.stages |> Enum.with_index() |> Enum.reduce_while(run, &run_stage/2) do
