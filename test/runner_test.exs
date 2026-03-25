@@ -6,22 +6,27 @@ defmodule Flux.RunnerTest do
 
     @asset true
     def base(ctx, _deps) do
-      {:ok, {:base, ctx.params[:partition]}}
+      {:ok, %Flux.Asset.Output{output: {:base, ctx.params[:partition]}}}
     end
 
     @asset depends_on: [:base]
     def transform(_ctx, deps) do
-      {:ok, {:transform, Map.fetch!(deps, {__MODULE__, :base})}}
+      {:ok, %Flux.Asset.Output{output: {:transform, Map.fetch!(deps, {__MODULE__, :base})}}}
     end
 
     @asset depends_on: [:base]
     def invalid_return(_ctx, _deps) do
-      :bad_shape
+      {:ok, :bad_shape}
     end
 
     @asset depends_on: [:transform]
     def final(_ctx, deps) do
-      {:ok, {:final, Map.fetch!(deps, {__MODULE__, :transform})}}
+      {:ok, %Flux.Asset.Output{output: {:final, Map.fetch!(deps, {__MODULE__, :transform})}}}
+    end
+
+    @asset depends_on: [:transform]
+    def target_only(_ctx, deps) do
+      {:ok, %Flux.Asset.Output{output: map_size(deps)}}
     end
 
     @asset depends_on: [:base]
@@ -75,11 +80,11 @@ defmodule Flux.RunnerTest do
   end
 
   test "supports dependencies: :none target-only runs" do
-    assert {:ok, run} = Flux.run({RunnerAssets, :base}, dependencies: :none)
+    assert {:ok, run} = Flux.run({RunnerAssets, :target_only}, dependencies: :none)
 
     assert run.status == :ok
-    assert Map.keys(run.outputs) == [{RunnerAssets, :base}]
-    assert run.target_outputs == %{{RunnerAssets, :base} => {:base, nil}}
+    assert Map.keys(run.outputs) == [{RunnerAssets, :target_only}]
+    assert run.target_outputs == %{{RunnerAssets, :target_only} => 0}
   end
 
   test "captures invalid return shape as a structured run failure" do
@@ -89,7 +94,8 @@ defmodule Flux.RunnerTest do
     assert %{ref: {RunnerAssets, :invalid_return}} = run.error
 
     assert run.asset_results[{RunnerAssets, :invalid_return}].error.reason ==
-             {:invalid_return_shape, :bad_shape}
+             {:invalid_return_shape, {:ok, :bad_shape},
+              expected: "{:ok, %Flux.Asset.Output{}} | {:error, reason}"}
   end
 
   test "captures raised exceptions with stacktrace details" do

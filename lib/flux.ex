@@ -90,16 +90,21 @@ defmodule Flux do
 
         @doc "Extract raw orders from the sales source"
         @asset true
-        def extract_orders do
-          [%{id: 1, total: 100}]
+        def extract_orders(_ctx, _deps) do
+          {:ok, %Flux.Asset.Output{output: [%{id: 1, total: 100}], meta: %{source: :sales}}}
         end
 
         @doc "Normalize extracted orders"
         @asset depends_on: [:extract_orders]
-        def normalize_orders(orders) do
-          Enum.map(orders, fn order ->
-            Map.put(order, :normalized, true)
-          end)
+        def normalize_orders(_ctx, deps) do
+          orders = Map.fetch!(deps, {__MODULE__, :extract_orders})
+
+          normalized =
+            Enum.map(orders, fn order ->
+              Map.put(order, :normalized, true)
+            end)
+
+          {:ok, %Flux.Asset.Output{output: normalized, meta: %{normalized_count: length(normalized)}}}
         end
       end
 
@@ -112,8 +117,9 @@ defmodule Flux do
 
         @doc "Build the fact table for sales"
         @asset depends_on: [{SalesETL, :normalize_orders}]
-        def fact_sales(normalized_orders) do
-          %{rows: normalized_orders}
+        def fact_sales(_ctx, deps) do
+          normalized_orders = Map.fetch!(deps, {SalesETL, :normalize_orders})
+          {:ok, %Flux.Asset.Output{output: %{rows: normalized_orders}}}
         end
       end
 
@@ -622,6 +628,12 @@ defmodule Flux do
 
   By default, a run should include the full upstream dependency chain so that
   asset dependencies automatically form the execution pipeline.
+
+  Asset invocation and return contract for this first runner:
+
+    * assets are invoked as `def asset(ctx, deps)`
+    * success must be `{:ok, %Flux.Asset.Output{}}`
+    * failure must be `{:error, reason}`
 
   ## Examples
 

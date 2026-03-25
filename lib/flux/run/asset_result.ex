@@ -23,7 +23,8 @@ defmodule Flux.Run.AssetResult do
           started_at: DateTime.t(),
           finished_at: DateTime.t(),
           duration_ms: non_neg_integer(),
-          value: term() | nil,
+          output: term() | nil,
+          meta: map(),
           error: error_details() | nil
         }
 
@@ -34,7 +35,8 @@ defmodule Flux.Run.AssetResult do
     :started_at,
     :finished_at,
     :duration_ms,
-    value: nil,
+    output: nil,
+    meta: %{},
     error: nil
   ]
 end

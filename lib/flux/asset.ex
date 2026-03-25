@@ -10,6 +10,7 @@ defmodule Flux.Asset do
   """
 
   alias Flux.Ref
+  alias Flux.Asset.Output
 
   @typedoc """
   Supported asset kinds.
@@ -35,6 +36,11 @@ defmodule Flux.Asset do
           tags: [tag()],
           depends_on: [Ref.t()]
         }
+
+  @typedoc """
+  Canonical return shape expected from asset function execution.
+  """
+  @type return_value :: {:ok, Output.t()} | {:error, term()}
 
   @valid_kinds [:materialized, :view, :ephemeral]
 

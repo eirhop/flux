@@ -7,6 +7,7 @@ defmodule Flux.Runner do
   """
 
   alias Flux.Run
+  alias Flux.Asset.Output
   alias Flux.Run.AssetResult
   alias Flux.Run.Context
 
@@ -73,11 +74,12 @@ defmodule Flux.Runner do
   defp execute_asset(%Run{} = run, ref, stage) do
     started_at = DateTime.utc_now()
     started_monotonic = System.monotonic_time(:millisecond)
+    node = Map.fetch!(run.plan.nodes, ref)
 
     with {:ok, asset} <- Flux.Registry.get_asset(ref),
-         {:ok, deps} <- dependency_outputs(run, asset.depends_on),
+         {:ok, deps} <- dependency_outputs(run, node.upstream),
          ctx <- build_context(run, ref, stage),
-         {:ok, value} <- invoke_asset(asset, ctx, deps) do
+         {:ok, %Output{} = asset_output} <- invoke_asset(asset, ctx, deps) do
       finished_at = DateTime.utc_now()
 
       result = %AssetResult{
@@ -87,13 +89,14 @@ defmodule Flux.Runner do
         started_at: started_at,
         finished_at: finished_at,
         duration_ms: System.monotonic_time(:millisecond) - started_monotonic,
-        value: value
+        output: asset_output.output,
+        meta: asset_output.meta
       }
 
       {:ok,
        %Run{
          run
-         | outputs: Map.put(run.outputs, ref, value),
+         | outputs: Map.put(run.outputs, ref, asset_output.output),
            asset_results: Map.put(run.asset_results, ref, result)
        }}
     else
@@ -126,9 +129,16 @@ defmodule Flux.Runner do
   defp invoke_asset(asset, %Context{} = ctx, deps) do
     try do
       case apply(asset.module, asset.name, [ctx, deps]) do
-        {:ok, value} -> {:ok, value}
-        {:error, reason} -> {:error, reason}
-        other -> {:error, {:invalid_return_shape, other}}
+        {:ok, %Output{} = asset_output} ->
+          {:ok, asset_output}
+
+        {:error, reason} ->
+          {:error, reason}
+
+        other ->
+          {:error,
+           {:invalid_return_shape, other,
+            expected: "{:ok, %Flux.Asset.Output{}} | {:error, reason}"}}
       end
     rescue
       error ->

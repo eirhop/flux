@@ -11,6 +11,11 @@ defmodule Flux.Assets do
     * enforcing authoring rules
     * normalizing DSL-friendly dependency declarations
     * emitting `__flux_assets__/0` for later runtime inspection
+
+  Asset authoring contract:
+
+    * asset functions must have arity 2 and use `def asset(ctx, deps)`
+    * assets should return `{:ok, %Flux.Asset.Output{}}` or `{:error, reason}`
   """
 
   alias Flux.Asset
@@ -38,15 +43,25 @@ defmodule Flux.Assets do
 
         case kind do
           :def ->
-            Module.put_attribute(env.module, :flux_assets_raw, %{
-              module: env.module,
-              name: name,
-              arity: length(args || []),
-              doc: normalize_doc(Module.get_attribute(env.module, :doc)),
-              file: normalize_file(env.file),
-              line: env.line,
-              opts: asset_opts
-            })
+            arity = length(args || [])
+
+            if arity == 2 do
+              Module.put_attribute(env.module, :flux_assets_raw, %{
+                module: env.module,
+                name: name,
+                arity: arity,
+                doc: normalize_doc(Module.get_attribute(env.module, :doc)),
+                file: normalize_file(env.file),
+                line: env.line,
+                opts: asset_opts
+              })
+            else
+              compile_error!(
+                env.file,
+                env.line,
+                "@asset functions must have arity 2 and use signature def asset(ctx, deps)"
+              )
+            end
 
           :defp ->
             compile_error!(env.file, env.line, "@asset can only be used on public functions")
