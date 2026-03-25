@@ -9,8 +9,9 @@ defmodule Flux.Application do
 
     with :ok <- Flux.Registry.load(),
          :ok <- Flux.GraphIndex.load(),
-         :ok <- Flux.Storage.validate_adapter(adapter) do
-      Supervisor.start_link(Flux.Storage.child_specs(),
+         :ok <- Flux.Storage.validate_adapter(adapter),
+         {:ok, child_specs} <- Flux.Storage.child_specs() do
+      Supervisor.start_link(child_specs,
         strategy: :one_for_one,
         name: Flux.Supervisor
       )

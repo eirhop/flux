@@ -44,6 +44,35 @@ defmodule Flux.RunnerTest do
     end
   end
 
+  defmodule TerminalFailingStore do
+    @behaviour Flux.RunStore
+
+    @counter_key {__MODULE__, :put_count}
+
+    @impl true
+    def child_spec(_opts), do: :none
+
+    @impl true
+    def put_run(_run, _opts) do
+      count = :persistent_term.get(@counter_key, 0)
+      :persistent_term.put(@counter_key, count + 1)
+
+      if count == 0 do
+        :ok
+      else
+        {:error, :terminal_write_failed}
+      end
+    end
+
+    @impl true
+    def get_run(_run_id, _opts), do: {:error, :not_found}
+
+    @impl true
+    def list_runs(_opts, _adapter_opts), do: {:ok, []}
+
+    def reset!, do: :persistent_term.erase(@counter_key)
+  end
+
   setup do
     previous_modules = Application.get_env(:flux, :asset_modules)
     previous_catalog = Flux.Registry.build_catalog(previous_modules || [])
@@ -163,6 +192,18 @@ defmodule Flux.RunnerTest do
 
   test "returns :not_found for missing runs" do
     assert {:error, :not_found} = Flux.get_run("missing-run-id")
+  end
+
+  test "returns execution result even when terminal persistence fails" do
+    Application.put_env(:flux, :run_store, TerminalFailingStore)
+    TerminalFailingStore.reset!()
+
+    assert {:ok, run} = Flux.run({RunnerAssets, :final})
+    assert run.status == :ok
+  end
+
+  test "rejects unsupported list_runs status filter values" do
+    assert {:error, :invalid_opts} = Flux.list_runs(status: :pending)
   end
 
   defp clear_memory_run_store do

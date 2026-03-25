@@ -374,7 +374,7 @@ defmodule Flux do
   Filter options for `list_runs/1`.
   """
   @type list_runs_opts :: [
-          status: :pending | :running | :ok | :error,
+          status: :running | :ok | :error,
           limit: pos_integer()
         ]
 

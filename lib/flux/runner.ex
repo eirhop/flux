@@ -34,9 +34,9 @@ defmodule Flux.Runner do
         params: params
       }
 
-      with :ok <- Flux.Storage.put_run(run),
-           result <- execute_plan(run),
-           :ok <- persist_terminal_result(result) do
+      with :ok <- Flux.Storage.put_run(run) do
+        result = execute_plan(run)
+        _ = persist_terminal_result(result)
         result
       end
     end

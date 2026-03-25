@@ -11,16 +11,16 @@ defmodule Flux.Storage do
 
   @type error :: :not_found | :invalid_opts | {:store_error, term()}
 
-  @spec child_specs() :: [Supervisor.child_spec()]
+  @spec child_specs() :: {:ok, [Supervisor.child_spec()]} | {:error, error()}
   def child_specs do
     adapter = adapter_module()
 
     with :ok <- validate_adapter(adapter),
          {:ok, child_spec} <- adapter.child_spec(adapter_opts()) do
-      [child_spec]
+      {:ok, [child_spec]}
     else
-      :none -> []
-      {:error, _reason} -> []
+      :none -> {:ok, []}
+      {:error, reason} -> {:error, {:store_error, reason}}
     end
   end
 
@@ -76,7 +76,7 @@ defmodule Flux.Storage do
     limit = Keyword.get(opts, :limit)
 
     cond do
-      not is_nil(status) and status not in [:pending, :running, :ok, :error] ->
+      not is_nil(status) and status not in [:running, :ok, :error] ->
         {:error, :invalid_opts}
 
       not is_nil(limit) and (not is_integer(limit) or limit <= 0) ->
