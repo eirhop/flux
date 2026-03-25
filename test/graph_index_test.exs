@@ -6,11 +6,11 @@ defmodule Flux.GraphIndexTest do
 
     @doc "Raw orders"
     @asset true
-    def raw_orders, do: [%{id: 1}]
+    def raw_orders(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: [%{id: 1}]}}
 
     @doc "Raw customers"
     @asset true
-    def raw_customers, do: [%{id: 1}]
+    def raw_customers(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: [%{id: 1}]}}
   end
 
   defmodule WarehouseAssets do
@@ -20,15 +20,24 @@ defmodule Flux.GraphIndexTest do
 
     @doc "Normalize orders"
     @asset depends_on: [{SourceAssets, :raw_orders}], tags: [:warehouse]
-    def normalize_orders(rows), do: rows
+    def normalize_orders(_ctx, deps),
+      do: {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {SourceAssets, :raw_orders})}}
 
     @doc "Normalize customers"
     @asset depends_on: [{SourceAssets, :raw_customers}], tags: [:warehouse]
-    def normalize_customers(rows), do: rows
+    def normalize_customers(_ctx, deps),
+      do: {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {SourceAssets, :raw_customers})}}
 
     @doc "Build sales fact"
     @asset depends_on: [:normalize_orders, :normalize_customers], tags: [:finance]
-    def fact_sales(orders, customers), do: {orders, customers}
+    def fact_sales(_ctx, deps) do
+      {:ok,
+       %Flux.Asset.Output{
+         output:
+           {Map.fetch!(deps, {__MODULE__, :normalize_orders}),
+            Map.fetch!(deps, {__MODULE__, :normalize_customers})}
+       }}
+    end
   end
 
   defmodule ReportingAssets do
@@ -38,7 +47,14 @@ defmodule Flux.GraphIndexTest do
 
     @doc "Build dashboard"
     @asset depends_on: [{WarehouseAssets, :fact_sales}, {WarehouseAssets, :normalize_orders}]
-    def dashboard(fact_sales, normalize_orders), do: {fact_sales, normalize_orders}
+    def dashboard(_ctx, deps) do
+      {:ok,
+       %Flux.Asset.Output{
+         output:
+           {Map.fetch!(deps, {WarehouseAssets, :fact_sales}),
+            Map.fetch!(deps, {WarehouseAssets, :normalize_orders})}
+       }}
+    end
   end
 
   setup do

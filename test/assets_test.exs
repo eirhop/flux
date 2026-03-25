@@ -3,7 +3,7 @@ defmodule Flux.AssetsTest.Upstream do
 
   @doc "Load source rows"
   @asset true
-  def source_rows, do: [%{id: 1, total: 100}]
+  def source_rows(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: [%{id: 1, total: 100}]}}
 end
 
 defmodule Flux.AssetsTest.Sample do
@@ -13,15 +13,19 @@ defmodule Flux.AssetsTest.Sample do
 
   @doc "Extract raw orders"
   @asset true
-  def extract_orders, do: [%{id: 1, total: 100}]
+  def extract_orders(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: [%{id: 1, total: 100}]}}
 
   @doc "Normalize extracted orders"
   @asset depends_on: [:extract_orders], tags: [:sales, "warehouse"]
-  def normalize_orders(orders), do: Enum.map(orders, &Map.put(&1, :normalized, true))
+  def normalize_orders(_ctx, deps) do
+    orders = Map.fetch!(deps, {__MODULE__, :extract_orders})
+    {:ok, %Flux.Asset.Output{output: Enum.map(orders, &Map.put(&1, :normalized, true))}}
+  end
 
   @doc false
   @asset depends_on: [{Upstream, :source_rows}], kind: :view
-  def fact_sales(rows), do: %{rows: rows}
+  def fact_sales(_ctx, deps),
+    do: {:ok, %Flux.Asset.Output{output: %{rows: Map.fetch!(deps, {Upstream, :source_rows})}}}
 end
 
 defmodule Flux.AssetsTest do
@@ -41,7 +45,7 @@ defmodule Flux.AssetsTest do
     assert [%Asset{} = extract, %Asset{} = normalize, %Asset{} = fact] = assets
 
     assert extract.ref == {Flux.AssetsTest.Sample, :extract_orders}
-    assert extract.arity == 0
+    assert extract.arity == 2
     assert extract.doc == "Extract raw orders"
     assert extract.file == "test/assets_test.exs"
     assert is_integer(extract.line)
@@ -67,7 +71,7 @@ defmodule Flux.AssetsTest do
       use Flux.Assets
 
       @asset kind: :invalid
-      def bad_kind, do: :ok
+      def bad_kind(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
       """)
     end
 
@@ -76,7 +80,7 @@ defmodule Flux.AssetsTest do
       use Flux.Assets
 
       @asset tags: :sales
-      def bad_tags, do: :ok
+      def bad_tags(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
       """)
     end
 
@@ -85,7 +89,7 @@ defmodule Flux.AssetsTest do
       use Flux.Assets
 
       @asset tags: [:sales, 1]
-      def bad_tag_entry, do: :ok
+      def bad_tag_entry(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
       """)
     end
 
@@ -94,7 +98,7 @@ defmodule Flux.AssetsTest do
       use Flux.Assets
 
       @asset depends_on: :extract_orders
-      def bad_depends_on_shape, do: :ok
+      def bad_depends_on_shape(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
       """)
     end
 
@@ -103,7 +107,7 @@ defmodule Flux.AssetsTest do
       use Flux.Assets
 
       @asset depends_on: [:ok, "bad"]
-      def bad_depends_on, do: :ok
+      def bad_depends_on(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
       """)
     end
 
@@ -112,10 +116,10 @@ defmodule Flux.AssetsTest do
       use Flux.Assets
 
       @asset true
-      def duplicate, do: :ok
+      def duplicate(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
 
       @asset true
-      def duplicate(value), do: value
+      def duplicate(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
       """)
     end
 
@@ -124,7 +128,7 @@ defmodule Flux.AssetsTest do
       use Flux.Assets
 
       @asset true
-      defp private_asset, do: :ok
+      defp private_asset(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
       """)
     end
 
@@ -133,6 +137,15 @@ defmodule Flux.AssetsTest do
       use Flux.Assets
 
       @asset true
+      """)
+    end
+
+    assert_raise CompileError, ~r/@asset functions must have arity 2/, fn ->
+      compile_test_module("""
+      use Flux.Assets
+
+      @asset true
+      def wrong_arity, do: {:ok, %Flux.Asset.Output{output: :ok}}
       """)
     end
   end

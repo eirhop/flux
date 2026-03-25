@@ -90,16 +90,21 @@ defmodule Flux do
 
         @doc "Extract raw orders from the sales source"
         @asset true
-        def extract_orders do
-          [%{id: 1, total: 100}]
+        def extract_orders(_ctx, _deps) do
+          {:ok, %Flux.Asset.Output{output: [%{id: 1, total: 100}], meta: %{source: :sales}}}
         end
 
         @doc "Normalize extracted orders"
         @asset depends_on: [:extract_orders]
-        def normalize_orders(orders) do
-          Enum.map(orders, fn order ->
-            Map.put(order, :normalized, true)
-          end)
+        def normalize_orders(_ctx, deps) do
+          orders = Map.fetch!(deps, {__MODULE__, :extract_orders})
+
+          normalized =
+            Enum.map(orders, fn order ->
+              Map.put(order, :normalized, true)
+            end)
+
+          {:ok, %Flux.Asset.Output{output: normalized, meta: %{normalized_count: length(normalized)}}}
         end
       end
 
@@ -112,8 +117,9 @@ defmodule Flux do
 
         @doc "Build the fact table for sales"
         @asset depends_on: [{SalesETL, :normalize_orders}]
-        def fact_sales(normalized_orders) do
-          %{rows: normalized_orders}
+        def fact_sales(_ctx, deps) do
+          normalized_orders = Map.fetch!(deps, {SalesETL, :normalize_orders})
+          {:ok, %Flux.Asset.Output{output: %{rows: normalized_orders}}}
         end
       end
 
@@ -299,8 +305,8 @@ defmodule Flux do
     5. startup registry loading and caching - done
     6. dependency resolution and graph construction - in progress
     7. graph inspection queries - in progress
-    8. execution planning - in progress
-    9. run model and in-memory execution
+    8. execution planning - done
+    9. run model and in-memory execution - in progress
     10. run storage and retrieval
     11. live run event subscriptions
 
@@ -351,7 +357,8 @@ defmodule Flux do
   Options for `run/2`.
   """
   @type run_opts :: [
-          dependencies: dependencies_mode()
+          dependencies: dependencies_mode(),
+          params: map()
         ]
 
   @typedoc """
@@ -622,37 +629,39 @@ defmodule Flux do
   By default, a run should include the full upstream dependency chain so that
   asset dependencies automatically form the execution pipeline.
 
+  Asset invocation and return contract for this first runner:
+
+    * assets are invoked as `def asset(ctx, deps)`
+    * success must be `{:ok, %Flux.Asset.Output{}}`
+    * failure must be `{:error, reason}`
+
   ## Examples
 
-      iex> Flux.run({MyApp.GoldETL, :fact_sales})
-      ** (RuntimeError) TODO: implement Flux.run/2
-
-      iex> Flux.run({MyApp.GoldETL, :fact_sales}, dependencies: :none)
-      ** (RuntimeError) TODO: implement Flux.run/2
+      iex> Flux.run({Unknown.Module, :fact_sales})
+      {:error, :asset_not_found}
 
   ## Expected implementation flow
 
     1. Resolve the target asset
     2. Build the dependency graph or subgraph
     3. Produce an execution plan
-    4. Create and persist a run record
-    5. Emit run and asset lifecycle events
-    6. Execute the plan
+    4. Execute stage-by-stage in deterministic order
+    5. Return run status, outputs, timings, and errors
 
   ## TODO
 
     * Implement on top of the startup-built DAG index in `Flux.GraphIndex`
     * Delegate to `Flux.Runner.run/2`
-    * Define the return contract, likely `{:ok, run}` or `{:error, reason}`
-    * Support `dependencies: :all | :none` first
-    * Execute the plan built by `plan_run/2`
-    * Add parallel scheduling only after the basic plan format is stable
+    * Keep return contract `{:ok, run}` or `{:error, run | reason}`
+    * Keep `dependencies: :all | :none` as the first execution mode toggle
+    * Keep execution in-memory and synchronous for the first cut
+    * Add run process supervision and stage-level parallelism in follow-up work
     * Add freshness-aware skipping after the planner can reason about materialized assets
   """
-  @spec run(asset_ref(), run_opts()) :: term()
+  @spec run(asset_ref(), run_opts()) :: {:ok, Flux.Run.t()} | {:error, Flux.Run.t() | term()}
   def run({module, name}, opts \\ [])
       when is_atom(module) and is_atom(name) and is_list(opts) do
-    todo!("Flux.run/2")
+    Flux.Runner.run({module, name}, opts)
   end
 
   @doc """

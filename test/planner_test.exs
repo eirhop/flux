@@ -5,10 +5,10 @@ defmodule Flux.PlannerTest do
     use Flux.Assets
 
     @asset true
-    def raw_orders, do: :ok
+    def raw_orders(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
 
     @asset true
-    def raw_customers, do: :ok
+    def raw_customers(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
   end
 
   defmodule SilverAssets do
@@ -17,10 +17,10 @@ defmodule Flux.PlannerTest do
     alias Flux.PlannerTest.BronzeAssets
 
     @asset depends_on: [{BronzeAssets, :raw_orders}]
-    def nightly_orders(_orders), do: :ok
+    def nightly_orders(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
 
     @asset depends_on: [{BronzeAssets, :raw_customers}]
-    def monthly_customers(_customers), do: :ok
+    def monthly_customers(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
   end
 
   defmodule GoldAssets do
@@ -29,10 +29,10 @@ defmodule Flux.PlannerTest do
     alias Flux.PlannerTest.SilverAssets
 
     @asset depends_on: [{SilverAssets, :nightly_orders}, {SilverAssets, :monthly_customers}]
-    def gold_sales(_orders, _customers), do: :ok
+    def gold_sales(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
 
     @asset depends_on: [{SilverAssets, :nightly_orders}]
-    def gold_finance(_orders), do: :ok
+    def gold_finance(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
   end
 
   setup do
