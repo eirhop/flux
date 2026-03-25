@@ -303,11 +303,11 @@ defmodule Flux do
     3. per-module asset introspection through `Flux` - done
     4. global registry and configured asset discovery - done
     5. startup registry loading and caching - done
-    6. dependency resolution and graph construction - in progress
-    7. graph inspection queries - in progress
+    6. dependency resolution and graph construction - done
+    7. graph inspection queries - done
     8. execution planning - done
-    9. run model and in-memory execution - in progress
-    10. run storage and retrieval - in progress
+    9. run model and in-memory execution - done
+    10. run storage and retrieval - done
     11. live run event subscriptions
     12. pre-release refactor pass for shared helpers and consistent module patterns
     13. pre-release documentation and test hardening for v0.1
