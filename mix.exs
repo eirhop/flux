@@ -22,7 +22,8 @@ defmodule Flux.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:phoenix_pubsub, "~> 2.1"}
+      {:phoenix_pubsub,
+       git: "https://github.com/phoenixframework/phoenix_pubsub.git", tag: "v2.2.0"}
     ]
   end
 end

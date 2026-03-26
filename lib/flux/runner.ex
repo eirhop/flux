@@ -95,7 +95,7 @@ defmodule Flux.Runner do
     started_at = DateTime.utc_now()
     started_monotonic = System.monotonic_time(:millisecond)
     node = Map.fetch!(run.plan.nodes, ref)
-    run = emit_run_event(run, :asset_started, %{ref: ref, stage: stage})
+    run = emit_run_event(run, :asset_started, %{}, ref: ref, stage: stage)
 
     with {:ok, asset} <- Flux.Registry.get_asset(ref),
          {:ok, deps} <- dependency_outputs(run, node.upstream),
@@ -121,11 +121,10 @@ defmodule Flux.Runner do
       }
 
       run =
-        emit_run_event(run, :asset_finished, %{
+        emit_run_event(run, :asset_finished, %{duration_ms: result.duration_ms},
           ref: ref,
-          stage: stage,
-          duration_ms: result.duration_ms
-        })
+          stage: stage
+        )
 
       {:ok, run}
     else
@@ -134,11 +133,10 @@ defmodule Flux.Runner do
           fail_run(run, ref, stage, started_at, started_monotonic, normalize_reason(reason))
 
         failed_run =
-          emit_run_event(failed_run, :asset_failed, %{
+          emit_run_event(failed_run, :asset_failed, %{error: failed_run.error},
             ref: ref,
-            stage: stage,
-            error: failed_run.error
-          })
+            stage: stage
+          )
 
         {:error, failed_run}
     end
@@ -251,14 +249,17 @@ defmodule Flux.Runner do
     )
   end
 
-  defp emit_run_event(%Run{} = run, event, payload) when is_atom(event) and is_map(payload) do
+  # Event publishing is best-effort observability only: run execution and run
+  # storage persistence must continue even when PubSub delivery fails.
+  defp emit_run_event(%Run{} = run, event, payload, opts \\ [])
+       when is_atom(event) and is_map(payload) and is_list(opts) do
     next_seq = run.event_seq + 1
 
     _ =
       Flux.Events.publish_run_event(run.id, event, %{
         seq: next_seq,
-        ref: Map.get(payload, :ref),
-        stage: Map.get(payload, :stage),
+        ref: Keyword.get(opts, :ref),
+        stage: Keyword.get(opts, :stage),
         payload: payload
       })
 

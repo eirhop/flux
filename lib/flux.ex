@@ -759,6 +759,8 @@ defmodule Flux do
   explicit and can later grow with other subscription types if needed.
 
   The expected event model is structured run events rather than raw log lines.
+  Live event delivery is observability-only (best-effort) and is not part of
+  run correctness semantics.
 
   ## Examples
 
@@ -779,6 +781,9 @@ defmodule Flux do
 
   @doc """
   Unsubscribe from live events for a single run.
+
+  Live subscriptions are observability-only and do not affect run execution,
+  persistence, or final status outcomes.
 
   ## Examples
 

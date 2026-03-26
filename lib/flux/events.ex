@@ -32,8 +32,6 @@ defmodule Flux.Events do
   @spec subscribe_run(Flux.run_id()) :: :ok | {:error, term()}
   def subscribe_run(run_id) do
     Phoenix.PubSub.subscribe(pubsub_name(), run_topic(run_id))
-  rescue
-    error -> {:error, error}
   end
 
   @doc """
@@ -42,8 +40,6 @@ defmodule Flux.Events do
   @spec unsubscribe_run(Flux.run_id()) :: :ok | {:error, term()}
   def unsubscribe_run(run_id) do
     Phoenix.PubSub.unsubscribe(pubsub_name(), run_topic(run_id))
-  rescue
-    error -> {:error, error}
   end
 
   @doc """
@@ -64,8 +60,6 @@ defmodule Flux.Events do
       |> maybe_put(:payload, Map.get(attrs, :payload))
 
     Phoenix.PubSub.broadcast(pubsub_name(), run_topic(run_id), {:flux_run_event, event})
-  rescue
-    error -> {:error, error}
   end
 
   @doc """
@@ -83,5 +77,6 @@ defmodule Flux.Events do
   def run_topic(run_id), do: "flux:run:#{run_id}"
 
   defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, :payload, payload) when payload == %{}, do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end
