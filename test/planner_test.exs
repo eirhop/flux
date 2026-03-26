@@ -1,56 +1,20 @@
 defmodule Flux.PlannerTest do
   use ExUnit.Case
 
-  defmodule BronzeAssets do
-    use Flux.Assets
-
-    @asset true
-    def raw_orders(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
-
-    @asset true
-    def raw_customers(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
-  end
-
-  defmodule SilverAssets do
-    use Flux.Assets
-
-    alias Flux.PlannerTest.BronzeAssets
-
-    @asset depends_on: [{BronzeAssets, :raw_orders}]
-    def nightly_orders(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
-
-    @asset depends_on: [{BronzeAssets, :raw_customers}]
-    def monthly_customers(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
-  end
-
-  defmodule GoldAssets do
-    use Flux.Assets
-
-    alias Flux.PlannerTest.SilverAssets
-
-    @asset depends_on: [{SilverAssets, :nightly_orders}, {SilverAssets, :monthly_customers}]
-    def gold_sales(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
-
-    @asset depends_on: [{SilverAssets, :nightly_orders}]
-    def gold_finance(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: :ok}}
-  end
+  alias Flux.Test.Fixtures.Assets.Graph.BronzeAssets
+  alias Flux.Test.Fixtures.Assets.Graph.GoldAssets
+  alias Flux.Test.Fixtures.Assets.Graph.SilverAssets
 
   setup do
-    previous_modules = Application.get_env(:flux, :asset_modules)
-    previous_catalog = Flux.Registry.build_catalog(previous_modules || [])
+    state = Flux.TestSetup.capture_state()
 
-    Application.put_env(:flux, :asset_modules, [BronzeAssets, SilverAssets, GoldAssets])
-    assert :ok = Flux.Registry.reload()
-    assert :ok = Flux.GraphIndex.reload()
+    :ok =
+      Flux.TestSetup.setup_asset_modules([BronzeAssets, SilverAssets, GoldAssets],
+        reload_graph?: true
+      )
 
     on_exit(fn ->
-      if is_nil(previous_modules) do
-        Application.delete_env(:flux, :asset_modules)
-      else
-        Application.put_env(:flux, :asset_modules, previous_modules)
-      end
-
-      restore_registry(previous_catalog)
+      Flux.TestSetup.restore_state(state, reload_graph?: true)
     end)
 
     :ok
@@ -115,11 +79,4 @@ defmodule Flux.PlannerTest do
              {GoldAssets, :gold_sales}
            ]
   end
-
-  defp restore_registry({:ok, _catalog}) do
-    :ok = Flux.Registry.reload()
-    :ok = Flux.GraphIndex.reload()
-  end
-
-  defp restore_registry({:error, _reason}), do: :ok
 end
