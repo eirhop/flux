@@ -33,6 +33,16 @@ defmodule FluxTest do
     def __flux_assets__, do: :oops
   end
 
+  defmodule AdditionalAssets do
+    use Flux.Assets
+
+    @doc "Archive published orders"
+    @asset depends_on: [{CrossModuleAssets, :publish_orders}]
+    def archive_orders(_ctx, deps),
+      do:
+        {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {CrossModuleAssets, :publish_orders})}}
+  end
+
   setup do
     previous_modules = Application.get_env(:flux, :asset_modules)
     previous_catalog = Flux.Registry.build_catalog(previous_modules || [])
@@ -63,13 +73,15 @@ defmodule FluxTest do
            ]
   end
 
-  test "build_catalog preserves deterministic asset order across merge steps" do
-    assert {:ok, catalog} = Flux.Registry.build_catalog([SampleAssets, CrossModuleAssets])
+  test "build_catalog preserves deterministic asset order across module merges" do
+    assert {:ok, catalog} =
+             Flux.Registry.build_catalog([SampleAssets, CrossModuleAssets, AdditionalAssets])
 
     assert Enum.map(catalog.assets, & &1.ref) == [
              {SampleAssets, :extract_orders},
              {SampleAssets, :normalize_orders},
-             {CrossModuleAssets, :publish_orders}
+             {CrossModuleAssets, :publish_orders},
+             {AdditionalAssets, :archive_orders}
            ]
   end
 

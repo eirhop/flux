@@ -120,21 +120,24 @@ defmodule Flux.Registry do
 
   defp merge_assets(catalog, assets) do
     assets
-    |> Enum.reduce_while({:ok, catalog}, fn %Asset{} = asset, {:ok, acc} ->
-      if Map.has_key?(acc.assets_by_ref, asset.ref) do
+    |> Enum.reduce_while({:ok, {[], catalog.assets_by_ref}}, fn %Asset{} = asset,
+                                                                {:ok, {new_assets, assets_by_ref}} ->
+      if Map.has_key?(assets_by_ref, asset.ref) do
         {:halt, {:error, {:duplicate_asset, asset.ref}}}
       else
-        {:cont,
-         {:ok,
-          %{
-            assets: [asset | acc.assets],
-            assets_by_ref: Map.put(acc.assets_by_ref, asset.ref, asset)
-          }}}
+        {:cont, {:ok, {[asset | new_assets], Map.put(assets_by_ref, asset.ref, asset)}}}
       end
     end)
     |> case do
-      {:ok, acc} -> {:ok, %{acc | assets: Enum.reverse(acc.assets)}}
-      {:error, _reason} = error -> error
+      {:ok, {new_assets, assets_by_ref}} ->
+        {:ok,
+         %{
+           assets: catalog.assets ++ Enum.reverse(new_assets),
+           assets_by_ref: assets_by_ref
+         }}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 end
