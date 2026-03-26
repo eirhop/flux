@@ -10,6 +10,9 @@ The main api interface for library is found in `/lib/flux.ex`. This file contain
 - Always start by reading `/lib/flux.ex` to get overview of project, code interface and progres
 - Always update TODOS as we work on each of the interfaces in `/lib/flux.ex`
 - Always keep user documentation up to date in `/lib/flux.ex`.
+- We are using git dependencies and not hex. Therefore following commands must be run before compile and testing:
+    - mix archive.install github hexpm/hex branch latest --force
+    - mix deps.get
 
 ## What the agent should optimize for
 
