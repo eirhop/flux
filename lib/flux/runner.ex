@@ -35,6 +35,7 @@ defmodule Flux.Runner do
       }
 
       with :ok <- Flux.Storage.put_run(run) do
+        run = emit_run_event(run, :run_started, %{target_refs: run.target_refs})
         result = execute_plan(run)
         _ = persist_terminal_result(result)
         result
@@ -58,16 +59,21 @@ defmodule Flux.Runner do
   defp execute_plan(%Run{} = run) do
     case run.plan.stages |> Enum.with_index() |> Enum.reduce_while(run, &run_stage/2) do
       %Run{status: :error} = failed ->
+        failed = emit_run_event(failed, :run_failed, %{error: failed.error})
         {:error, failed}
 
       %Run{} = finished ->
-        {:ok,
-         %Run{
-           finished
-           | status: :ok,
-             finished_at: DateTime.utc_now(),
-             target_outputs: Map.take(finished.outputs, finished.target_refs)
-         }}
+        finished = %Run{
+          finished
+          | status: :ok,
+            finished_at: DateTime.utc_now(),
+            target_outputs: Map.take(finished.outputs, finished.target_refs)
+        }
+
+        finished =
+          emit_run_event(finished, :run_finished, %{target_outputs: finished.target_outputs})
+
+        {:ok, finished}
     end
   end
 
@@ -89,6 +95,7 @@ defmodule Flux.Runner do
     started_at = DateTime.utc_now()
     started_monotonic = System.monotonic_time(:millisecond)
     node = Map.fetch!(run.plan.nodes, ref)
+    run = emit_run_event(run, :asset_started, %{ref: ref, stage: stage})
 
     with {:ok, asset} <- Flux.Registry.get_asset(ref),
          {:ok, deps} <- dependency_outputs(run, node.upstream),
@@ -107,16 +114,33 @@ defmodule Flux.Runner do
         meta: asset_output.meta
       }
 
-      {:ok,
-       %Run{
-         run
-         | outputs: Map.put(run.outputs, ref, asset_output.output),
-           asset_results: Map.put(run.asset_results, ref, result)
-       }}
+      run = %Run{
+        run
+        | outputs: Map.put(run.outputs, ref, asset_output.output),
+          asset_results: Map.put(run.asset_results, ref, result)
+      }
+
+      run =
+        emit_run_event(run, :asset_finished, %{
+          ref: ref,
+          stage: stage,
+          duration_ms: result.duration_ms
+        })
+
+      {:ok, run}
     else
       {:error, reason} ->
-        {:error,
-         fail_run(run, ref, stage, started_at, started_monotonic, normalize_reason(reason))}
+        failed_run =
+          fail_run(run, ref, stage, started_at, started_monotonic, normalize_reason(reason))
+
+        failed_run =
+          emit_run_event(failed_run, :asset_failed, %{
+            ref: ref,
+            stage: stage,
+            error: failed_run.error
+          })
+
+        {:error, failed_run}
     end
   end
 
@@ -225,5 +249,19 @@ defmodule Flux.Runner do
       ],
       "-"
     )
+  end
+
+  defp emit_run_event(%Run{} = run, event, payload) when is_atom(event) and is_map(payload) do
+    next_seq = run.event_seq + 1
+
+    _ =
+      Flux.Events.publish_run_event(run.id, event, %{
+        seq: next_seq,
+        ref: Map.get(payload, :ref),
+        stage: Map.get(payload, :stage),
+        payload: payload
+      })
+
+    %Run{run | event_seq: next_seq}
   end
 end
