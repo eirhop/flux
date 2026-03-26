@@ -3,7 +3,6 @@ defmodule FluxTest do
 
   doctest Flux
 
-<<<<<<< HEAD
   defmodule SampleAssets do
     use Flux.Assets
 
@@ -41,14 +40,13 @@ defmodule FluxTest do
       do:
         {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {CrossModuleAssets, :publish_orders})}}
   end
-=======
+
   require Logger
 
   alias Flux.Test.Fixtures.Assets.Basic.AdditionalAssets
   alias Flux.Test.Fixtures.Assets.Basic.CrossModuleAssets
   alias Flux.Test.Fixtures.Assets.Basic.SampleAssets
   alias Flux.Test.Fixtures.Assets.Basic.SpoofedAssets
->>>>>>> 31db450 (Extract shared test fixtures and setup helpers)
 
   setup do
     state = Flux.TestSetup.capture_state()
