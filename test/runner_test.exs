@@ -1,99 +1,18 @@
 defmodule Flux.RunnerTest do
   use ExUnit.Case
 
-  defmodule RunnerAssets do
-    use Flux.Assets
-
-    @asset true
-    def base(ctx, _deps) do
-      {:ok, %Flux.Asset.Output{output: {:base, ctx.params[:partition]}}}
-    end
-
-    @asset depends_on: [:base]
-    def transform(_ctx, deps) do
-      {:ok, %Flux.Asset.Output{output: {:transform, Map.fetch!(deps, {__MODULE__, :base})}}}
-    end
-
-    @asset depends_on: [:base]
-    def invalid_return(_ctx, _deps) do
-      {:ok, :bad_shape}
-    end
-
-    @asset depends_on: [:transform]
-    def final(_ctx, deps) do
-      {:ok, %Flux.Asset.Output{output: {:final, Map.fetch!(deps, {__MODULE__, :transform})}}}
-    end
-
-    @asset depends_on: [:transform]
-    def target_only(_ctx, deps) do
-      {:ok, %Flux.Asset.Output{output: map_size(deps)}}
-    end
-
-    @asset depends_on: [:base]
-    def crashes(_ctx, _deps) do
-      raise "boom"
-    end
-
-    @asset true
-    def with_meta(_ctx, _deps) do
-      {:ok,
-       %Flux.Asset.Output{
-         output: {:rows, [1, 2, 3]},
-         meta: %{row_count: 123, source: :test}
-       }}
-    end
-  end
-
-  defmodule TerminalFailingStore do
-    @behaviour Flux.RunStore
-
-    @counter_key {__MODULE__, :put_count}
-
-    @impl true
-    def child_spec(_opts), do: :none
-
-    @impl true
-    def put_run(_run, _opts) do
-      count = :persistent_term.get(@counter_key, 0)
-      :persistent_term.put(@counter_key, count + 1)
-
-      if count == 0 do
-        :ok
-      else
-        {:error, :terminal_write_failed}
-      end
-    end
-
-    @impl true
-    def get_run(_run_id, _opts), do: {:error, :not_found}
-
-    @impl true
-    def list_runs(_opts, _adapter_opts), do: {:ok, []}
-
-    def reset!, do: :persistent_term.erase(@counter_key)
-  end
+  alias Flux.Test.Fixtures.Assets.Runner.RunnerAssets
+  alias Flux.Test.Fixtures.Assets.Runner.TerminalFailingStore
 
   setup do
-    previous_modules = Application.get_env(:flux, :asset_modules)
-    previous_catalog = Flux.Registry.build_catalog(previous_modules || [])
+    state = Flux.TestSetup.capture_state()
 
-    Application.put_env(:flux, :asset_modules, [RunnerAssets])
-    Application.put_env(:flux, :run_store, Flux.RunStore.Memory)
-    Application.put_env(:flux, :run_store_opts, [])
-    clear_memory_run_store()
-    assert :ok = Flux.Registry.reload()
-    assert :ok = Flux.GraphIndex.reload()
+    :ok = Flux.TestSetup.setup_asset_modules([RunnerAssets], reload_graph?: true)
+    :ok = Flux.TestSetup.configure_run_store(Flux.RunStore.Memory, [])
+    :ok = Flux.TestSetup.clear_memory_run_store()
 
     on_exit(fn ->
-      if is_nil(previous_modules) do
-        Application.delete_env(:flux, :asset_modules)
-      else
-        Application.put_env(:flux, :asset_modules, previous_modules)
-      end
-
-      Application.delete_env(:flux, :run_store)
-      Application.delete_env(:flux, :run_store_opts)
-      restore_registry(previous_catalog)
+      Flux.TestSetup.restore_state(state, reload_graph?: true, clear_run_store_env?: true)
     end)
 
     :ok
@@ -198,7 +117,7 @@ defmodule Flux.RunnerTest do
   end
 
   test "returns execution result even when terminal persistence fails" do
-    Application.put_env(:flux, :run_store, TerminalFailingStore)
+    :ok = Flux.TestSetup.configure_run_store(TerminalFailingStore, [])
     TerminalFailingStore.reset!()
 
     assert {:ok, run} = Flux.run({RunnerAssets, :final})
@@ -208,21 +127,4 @@ defmodule Flux.RunnerTest do
   test "rejects unsupported list_runs status filter values" do
     assert {:error, :invalid_opts} = Flux.list_runs(status: :pending)
   end
-
-  defp clear_memory_run_store do
-    table = Flux.RunStore.Memory.Table
-
-    if :ets.whereis(table) != :undefined do
-      :ets.delete_all_objects(table)
-    end
-
-    :ok
-  end
-
-  defp restore_registry({:ok, _catalog}) do
-    :ok = Flux.Registry.reload()
-    :ok = Flux.GraphIndex.reload()
-  end
-
-  defp restore_registry({:error, _reason}), do: :ok
 end

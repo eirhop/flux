@@ -3,6 +3,7 @@ defmodule FluxTest do
 
   doctest Flux
 
+<<<<<<< HEAD
   defmodule SampleAssets do
     use Flux.Assets
 
@@ -40,27 +41,27 @@ defmodule FluxTest do
       do:
         {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {CrossModuleAssets, :publish_orders})}}
   end
+=======
+  require Logger
+
+  alias Flux.Test.Fixtures.Assets.Basic.AdditionalAssets
+  alias Flux.Test.Fixtures.Assets.Basic.CrossModuleAssets
+  alias Flux.Test.Fixtures.Assets.Basic.SampleAssets
+  alias Flux.Test.Fixtures.Assets.Basic.SpoofedAssets
+>>>>>>> 31db450 (Extract shared test fixtures and setup helpers)
 
   setup do
-    previous_modules = Application.get_env(:flux, :asset_modules)
-    previous_catalog = Flux.Registry.build_catalog(previous_modules || [])
+    state = Flux.TestSetup.capture_state()
 
     on_exit(fn ->
-      if is_nil(previous_modules) do
-        Application.delete_env(:flux, :asset_modules)
-      else
-        Application.put_env(:flux, :asset_modules, previous_modules)
-      end
-
-      restore_registry(previous_catalog)
+      Flux.TestSetup.restore_state(state)
     end)
 
     :ok
   end
 
   test "lists globally configured assets through the registry-backed facade" do
-    Application.put_env(:flux, :asset_modules, [SampleAssets, CrossModuleAssets])
-    assert :ok = Flux.Registry.reload()
+    :ok = Flux.TestSetup.setup_asset_modules([SampleAssets, CrossModuleAssets])
 
     assert {:ok, assets} = Flux.list_assets()
 
@@ -90,8 +91,7 @@ defmodule FluxTest do
   end
 
   test "fetches an asset through the public facade" do
-    Application.put_env(:flux, :asset_modules, [SampleAssets, CrossModuleAssets])
-    assert :ok = Flux.Registry.reload()
+    :ok = Flux.TestSetup.setup_asset_modules([SampleAssets, CrossModuleAssets])
 
     assert {:ok, asset} = Flux.get_asset({SampleAssets, :normalize_orders})
     assert {:ok, cross_module_asset} = Flux.get_asset({CrossModuleAssets, :publish_orders})
@@ -104,9 +104,8 @@ defmodule FluxTest do
   end
 
   test "inspects dependency queries through the public facade" do
-    Application.put_env(:flux, :asset_modules, [SampleAssets, CrossModuleAssets])
-    assert :ok = Flux.Registry.reload()
-    assert :ok = Flux.GraphIndex.reload()
+    :ok =
+      Flux.TestSetup.setup_asset_modules([SampleAssets, CrossModuleAssets], reload_graph?: true)
 
     assert {:ok, upstream_assets} = Flux.upstream_assets({CrossModuleAssets, :publish_orders})
 
@@ -150,8 +149,7 @@ defmodule FluxTest do
   end
 
   test "reads from the startup-loaded cache until the registry is reloaded" do
-    Application.put_env(:flux, :asset_modules, [SampleAssets])
-    assert :ok = Flux.Registry.reload()
+    :ok = Flux.TestSetup.setup_asset_modules([SampleAssets])
     assert {:ok, assets} = Flux.list_assets()
 
     assert Enum.map(assets, & &1.ref) == [
@@ -177,7 +175,4 @@ defmodule FluxTest do
              {CrossModuleAssets, :publish_orders}
            ]
   end
-
-  defp restore_registry({:ok, _catalog}), do: :ok = Flux.Registry.reload()
-  defp restore_registry({:error, _reason}), do: :ok
 end

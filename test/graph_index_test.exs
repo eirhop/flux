@@ -1,84 +1,25 @@
 defmodule Flux.GraphIndexTest do
   use ExUnit.Case
 
-  defmodule SourceAssets do
-    use Flux.Assets
-
-    @doc "Raw orders"
-    @asset true
-    def raw_orders(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: [%{id: 1}]}}
-
-    @doc "Raw customers"
-    @asset true
-    def raw_customers(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: [%{id: 1}]}}
-  end
-
-  defmodule WarehouseAssets do
-    use Flux.Assets
-
-    alias Flux.GraphIndexTest.SourceAssets
-
-    @doc "Normalize orders"
-    @asset depends_on: [{SourceAssets, :raw_orders}], tags: [:warehouse]
-    def normalize_orders(_ctx, deps),
-      do: {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {SourceAssets, :raw_orders})}}
-
-    @doc "Normalize customers"
-    @asset depends_on: [{SourceAssets, :raw_customers}], tags: [:warehouse]
-    def normalize_customers(_ctx, deps),
-      do: {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {SourceAssets, :raw_customers})}}
-
-    @doc "Build sales fact"
-    @asset depends_on: [:normalize_orders, :normalize_customers], tags: [:finance]
-    def fact_sales(_ctx, deps) do
-      {:ok,
-       %Flux.Asset.Output{
-         output:
-           {Map.fetch!(deps, {__MODULE__, :normalize_orders}),
-            Map.fetch!(deps, {__MODULE__, :normalize_customers})}
-       }}
-    end
-  end
-
-  defmodule ReportingAssets do
-    use Flux.Assets
-
-    alias Flux.GraphIndexTest.WarehouseAssets
-
-    @doc "Build dashboard"
-    @asset depends_on: [{WarehouseAssets, :fact_sales}, {WarehouseAssets, :normalize_orders}]
-    def dashboard(_ctx, deps) do
-      {:ok,
-       %Flux.Asset.Output{
-         output:
-           {Map.fetch!(deps, {WarehouseAssets, :fact_sales}),
-            Map.fetch!(deps, {WarehouseAssets, :normalize_orders})}
-       }}
-    end
-  end
+  alias Flux.Test.Fixtures.Assets.Graph.ReportingAssets
+  alias Flux.Test.Fixtures.Assets.Graph.SourceAssets
+  alias Flux.Test.Fixtures.Assets.Graph.WarehouseAssets
 
   setup do
-    previous_modules = Application.get_env(:flux, :asset_modules)
-    previous_catalog = Flux.Registry.build_catalog(previous_modules || [])
+    state = Flux.TestSetup.capture_state()
 
     on_exit(fn ->
-      if is_nil(previous_modules) do
-        Application.delete_env(:flux, :asset_modules)
-      else
-        Application.put_env(:flux, :asset_modules, previous_modules)
-      end
-
-      restore_registry(previous_catalog)
+      Flux.TestSetup.restore_state(state, reload_graph?: true)
     end)
 
     :ok
   end
 
   test "builds a global DAG index with upstream, downstream, transitive closures, and topological order" do
-    Application.put_env(:flux, :asset_modules, [SourceAssets, WarehouseAssets, ReportingAssets])
-
-    assert :ok = Flux.Registry.reload()
-    assert :ok = Flux.GraphIndex.reload()
+    :ok =
+      Flux.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
+        reload_graph?: true
+      )
 
     assert {:ok, upstream} = Flux.GraphIndex.upstream_of({WarehouseAssets, :fact_sales})
 
@@ -124,10 +65,10 @@ defmodule Flux.GraphIndexTest do
   end
 
   test "selects related assets with filters and direct traversal options" do
-    Application.put_env(:flux, :asset_modules, [SourceAssets, WarehouseAssets, ReportingAssets])
-
-    assert :ok = Flux.Registry.reload()
-    assert :ok = Flux.GraphIndex.reload()
+    :ok =
+      Flux.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
+        reload_graph?: true
+      )
 
     assert {:ok, assets} =
              Flux.GraphIndex.related_assets({ReportingAssets, :dashboard},
@@ -155,10 +96,10 @@ defmodule Flux.GraphIndexTest do
   end
 
   test "builds filtered subgraphs rooted at a target reference" do
-    Application.put_env(:flux, :asset_modules, [SourceAssets, WarehouseAssets, ReportingAssets])
-
-    assert :ok = Flux.Registry.reload()
-    assert :ok = Flux.GraphIndex.reload()
+    :ok =
+      Flux.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
+        reload_graph?: true
+      )
 
     assert {:ok, subgraph} =
              Flux.GraphIndex.subgraph({ReportingAssets, :dashboard},
@@ -180,10 +121,10 @@ defmodule Flux.GraphIndexTest do
   end
 
   test "returns invalid_opts for invalid graph query options" do
-    Application.put_env(:flux, :asset_modules, [SourceAssets, WarehouseAssets, ReportingAssets])
-
-    assert :ok = Flux.Registry.reload()
-    assert :ok = Flux.GraphIndex.reload()
+    :ok =
+      Flux.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
+        reload_graph?: true
+      )
 
     assert {:error, :invalid_opts} =
              Flux.GraphIndex.related_assets({ReportingAssets, :dashboard}, direction: :sideways)
@@ -201,7 +142,9 @@ defmodule Flux.GraphIndexTest do
              Flux.GraphIndex.related_assets({ReportingAssets, :dashboard}, kinds: :table)
 
     assert {:error, :invalid_opts} =
-             Flux.GraphIndex.related_assets({ReportingAssets, :dashboard}, modules: ReportingAssets)
+             Flux.GraphIndex.related_assets({ReportingAssets, :dashboard},
+               modules: ReportingAssets
+             )
 
     assert {:error, :invalid_opts} =
              Flux.GraphIndex.subgraph({ReportingAssets, :dashboard}, names: :dashboard)
@@ -248,11 +191,4 @@ defmodule Flux.GraphIndexTest do
     assert {:error, {:cycle, cycle}} = Flux.GraphIndex.build_index([a, b])
     assert cycle == [{__MODULE__, :a}, {__MODULE__, :b}, {__MODULE__, :a}]
   end
-
-  defp restore_registry({:ok, _catalog}) do
-    :ok = Flux.Registry.reload()
-    :ok = Flux.GraphIndex.reload()
-  end
-
-  defp restore_registry({:error, _reason}), do: :ok
 end
