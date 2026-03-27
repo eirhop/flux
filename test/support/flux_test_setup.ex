@@ -3,7 +3,9 @@ defmodule Flux.TestSetup do
 
   @type state :: %{
           previous_modules: list(module()) | nil,
-          previous_catalog: {:ok, Flux.Registry.catalog()} | {:error, term()}
+          previous_catalog: {:ok, Flux.Registry.catalog()} | {:error, term()},
+          previous_storage_adapter: module() | nil,
+          previous_storage_adapter_opts: keyword() | nil
         }
 
   @spec capture_state() :: state()
@@ -12,7 +14,9 @@ defmodule Flux.TestSetup do
 
     %{
       previous_modules: previous_modules,
-      previous_catalog: Flux.Registry.build_catalog(previous_modules || [])
+      previous_catalog: Flux.Registry.build_catalog(previous_modules || []),
+      previous_storage_adapter: Application.get_env(:flux, :storage_adapter),
+      previous_storage_adapter_opts: Application.get_env(:flux, :storage_adapter_opts)
     }
   end
 
@@ -52,6 +56,9 @@ defmodule Flux.TestSetup do
     if Keyword.get(opts, :clear_storage_adapter_env?, false) do
       Application.delete_env(:flux, :storage_adapter)
       Application.delete_env(:flux, :storage_adapter_opts)
+    else
+      restore_env(:storage_adapter, state.previous_storage_adapter)
+      restore_env(:storage_adapter_opts, state.previous_storage_adapter_opts)
     end
 
     restore_registry(state.previous_catalog, opts)
@@ -71,4 +78,7 @@ defmodule Flux.TestSetup do
   end
 
   defp restore_registry({:error, _reason}, _opts), do: :ok
+
+  defp restore_env(key, nil), do: Application.delete_env(:flux, key)
+  defp restore_env(key, value), do: Application.put_env(:flux, key, value)
 end

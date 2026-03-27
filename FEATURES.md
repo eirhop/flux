@@ -42,11 +42,11 @@ Provide a way to define business-oriented assets as normal Elixir functions with
 
 **Todo list**
 
-* [ ] Verify the DSL supports asset declaration on normal functions.
-* [ ] Verify metadata capture for docs, dependencies, kind, tags, source file, and source line.
-* [ ] Verify both local and cross-module dependency references are supported.
-* [ ] Add or confirm tests for compile-time metadata extraction.
-* [ ] Add or confirm tests for invalid asset declarations.
+* [x] Verify the DSL supports asset declaration on normal functions.
+* [x] Verify metadata capture for docs, dependencies, kind, tags, source file, and source line.
+* [x] Verify both local and cross-module dependency references are supported.
+* [x] Add or confirm tests for compile-time metadata extraction.
+* [x] Add or confirm tests for invalid asset declarations.
 
 #### 2. Asset registry and discovery
 
@@ -58,12 +58,12 @@ Expose a stable public surface for listing configured assets and fetching asset 
 
 **Todo list**
 
-* [ ] Verify `Flux.list_assets/0` returns the configured global asset catalog.
-* [ ] Verify `Flux.list_assets/1` returns only assets for a target module.
-* [ ] Verify `Flux.get_asset/1` returns canonical metadata.
-* [ ] Verify unknown modules return `:not_asset_module`.
-* [ ] Verify missing assets return `:asset_not_found`.
-* [ ] Add regression tests for duplicate or conflicting asset references.
+* [x] Verify `Flux.list_assets/0` returns the configured global asset catalog.
+* [x] Verify `Flux.list_assets/1` returns only assets for a target module.
+* [x] Verify `Flux.get_asset/1` returns canonical metadata.
+* [x] Verify unknown modules return `:not_asset_module`.
+* [x] Verify missing assets return `:asset_not_found`.
+* [x] Add regression tests for duplicate or conflicting asset references.
 
 #### 3. Dependency graph model and inspection
 
@@ -75,12 +75,12 @@ Model dependencies as a DAG and expose read APIs for upstream/downstream inspect
 
 **Todo list**
 
-* [ ] Verify DAG validation rejects cycles.
-* [ ] Verify shared upstream dependencies are supported.
-* [ ] Verify `Flux.upstream_assets/2` returns deterministic results.
-* [ ] Verify `Flux.downstream_assets/2` returns deterministic results.
-* [ ] Verify `Flux.dependency_graph/2` respects filters for tags, kinds, modules, names, direction, transitive, and include_target.
-* [ ] Add tests for empty and single-node graphs.
+* [x] Verify DAG validation rejects cycles.
+* [x] Verify shared upstream dependencies are supported.
+* [x] Verify `Flux.upstream_assets/2` returns deterministic results.
+* [x] Verify `Flux.downstream_assets/2` returns deterministic results.
+* [x] Verify `Flux.dependency_graph/2` respects filters for tags, kinds, modules, names, direction, transitive, and include_target.
+* [x] Add tests for empty and single-node graphs.
 
 #### 4. Deterministic run planner
 
@@ -92,12 +92,12 @@ Build a deterministic execution plan from one or more targets, with deduplicated
 
 **Todo list**
 
-* [ ] Verify targets are normalized, deduplicated, and sorted.
-* [ ] Verify the topological order is deterministic.
-* [ ] Verify stage assignment is deterministic.
-* [ ] Verify nodes run at most once per plan.
-* [ ] Verify `dependencies: :all` and `dependencies: :none` semantics.
-* [ ] Add regression tests for multi-target planning.
+* [x] Verify targets are normalized, deduplicated, and sorted.
+* [x] Verify the topological order is deterministic.
+* [x] Verify stage assignment is deterministic.
+* [x] Verify nodes run at most once per plan.
+* [x] Verify `dependencies: :all` and `dependencies: :none` semantics.
+* [x] Add regression tests for multi-target planning.
 
 #### 5. Synchronous run execution
 
@@ -109,12 +109,12 @@ Provide a first execution runtime that runs planned work synchronously and retur
 
 **Todo list**
 
-* [ ] Verify assets are invoked as `asset(ctx, deps)`.
-* [ ] Verify dependency outputs are passed using canonical refs.
-* [ ] Verify success and error return contracts are enforced.
-* [ ] Verify execution follows deterministic planner order.
-* [ ] Verify failures stop execution in a predictable way.
-* [ ] Add tests for dependency mode behavior.
+* [x] Verify assets are invoked as `asset(ctx, deps)`.
+* [x] Verify dependency outputs are passed using canonical refs.
+* [x] Verify success and error return contracts are enforced.
+* [x] Verify execution follows deterministic planner order.
+* [x] Verify failures stop execution in a predictable way.
+* [x] Add tests for dependency mode behavior.
 
 #### 6. Run store and run inspection
 
@@ -126,12 +126,13 @@ Persist run metadata through the configured storage adapter and expose `get_run/
 
 **Todo list**
 
-* [ ] Verify run records are created for started runs.
-* [ ] Verify final statuses are persisted.
-* [ ] Verify `Flux.get_run/1` returns expected run state.
-* [ ] Verify `Flux.list_runs/1` supports status filtering and limit.
-* [ ] Verify storage-layer failures are normalized into public errors.
-* [ ] Add regression tests for invalid options.
+* [x] Verify run records are created for started runs.
+* [x] Verify final statuses are persisted.
+* [x] Verify `Flux.get_run/1` returns expected run state.
+* [x] Verify `Flux.list_runs/1` supports status filtering and limit.
+* [x] Verify storage-layer failures are normalized into public errors.
+* [x] Add regression tests for invalid options.
+* [x] Add regression coverage for test-state isolation so storage adapter changes do not leak across tests/doctests.
 
 #### 7. Run events
 
@@ -143,11 +144,11 @@ Expose live run event subscription as a best-effort observability mechanism for 
 
 **Todo list**
 
-* [ ] Verify `Flux.subscribe_run/1` subscribes successfully.
-* [ ] Verify `Flux.unsubscribe_run/1` unsubscribes successfully.
-* [ ] Verify run lifecycle events are emitted in expected order.
-* [ ] Verify event delivery is observability-only and not part of run correctness.
-* [ ] Add tests for event payload consistency.
+* [x] Verify `Flux.subscribe_run/1` subscribes successfully.
+* [x] Verify `Flux.unsubscribe_run/1` unsubscribes successfully.
+* [x] Verify run lifecycle events are emitted in expected order.
+* [x] Verify event delivery is observability-only and not part of run correctness.
+* [x] Add tests for event payload consistency.
 
 #### 8. Host application integration
 
@@ -159,15 +160,15 @@ Support use of Flux as an OTP dependency configured through host app application
 
 **Todo list**
 
-* [ ] Verify startup loads configured asset modules.
-* [ ] Verify the global graph index is built during boot.
-* [ ] Verify pubsub server configuration works.
-* [ ] Verify storage adapter configuration works.
-* [ ] Verify docs clearly describe startup and configuration lifecycle.
+* [x] Verify startup loads configured asset modules.
+* [x] Verify the global graph index is built during boot.
+* [x] Verify pubsub server configuration works.
+* [x] Verify storage adapter configuration works.
+* [x] Verify docs clearly describe startup and configuration lifecycle.
 
 #### 9. Release hygiene for first public tag
 
-**Status:** candidate
+**Status:** done
 
 **Scope**
 
@@ -175,11 +176,11 @@ Ensure the repository is ready for a public `v0.1.0` release from a packaging an
 
 **Todo list**
 
-* [ ] Verify `LICENSE` file exists and matches package metadata.
-* [ ] Add release notes or `CHANGELOG.md` entry for `v0.1.0`.
-* [ ] Verify README installation instructions match actual release workflow.
-* [ ] Verify package metadata in `mix.exs` is complete.
-* [ ] Verify CI covers the public API surface at a minimum.
+* [x] Verify `LICENSE` file exists and matches package metadata.
+* [x] Add release notes or `CHANGELOG.md` entry for `v0.1.0`.
+* [x] Verify README installation instructions match actual release workflow.
+* [x] Verify package metadata in `mix.exs` is complete.
+* [x] Verify CI covers the public API surface at a minimum.
 
 ---
 
