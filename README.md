@@ -122,7 +122,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:flux, git: "https://github.com/eirhop/flux.git", branch: "main"}
+    {:flux, git: "https://github.com/eirhop/flux.git", tag: "v0.1.0"}
   ]
 end
 ```

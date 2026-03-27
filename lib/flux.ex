@@ -166,12 +166,12 @@ defmodule Flux do
     3. register those modules under `config :flux, asset_modules: [...]`
     4. start the host application normally
 
-  Flux is not published on Hex yet, so today it should be installed directly
+  Flux is not published on Hex yet, so it should be installed directly
   from the repository. A minimal dependency declaration looks like this:
 
       defp deps do
         [
-          {:flux, git: "https://github.com/eirhop/flux.git", branch: "main"}
+          {:flux, git: "https://github.com/eirhop/flux.git", tag: "v0.1.0"}
         ]
       end
 
