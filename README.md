@@ -72,18 +72,53 @@ Key settings:
 ## Current limitations
 
 - The default run store is node-local in-memory storage.
-- Execution is currently synchronous.
+- Run execution is synchronous within a single BEAM node.
 - Run events are best-effort pubsub notifications.
+
+## Runtime behavior in this release
+
+- **Planning and execution**: Flux plans dependency-aware runs with deterministic topological stages and executes each stage in deterministic ref order.
+- **Run lifecycle**: each run transitions through `:running` to terminal `:ok` or `:error`, recording timestamps, per-asset results, outputs, and terminal error details.
+- **Storage facade contract**: run retrieval/listing APIs normalize storage failures to one of:
+  - `:not_found`
+  - `:invalid_opts`
+  - `{:store_error, reason}`
+- **Event delivery**: run events are published as best-effort observability signals and do not affect run correctness.
+
+## Guarantees in this release
+
+- **Run lifecycle semantics**
+  - `Flux.run/2` returns `{:ok, %Flux.Run{status: :ok}}` on success or `{:error, %Flux.Run{status: :error}}` on execution failure.
+  - Failed runs preserve structured failure context in both `run.error` and `run.asset_results[ref].error`.
+  - `Flux.get_run/1` returns the latest stored run state for an ID.
+- **Storage error contract**
+  - `Flux.get_run/1` and `Flux.list_runs/1` return storage errors only as `:not_found`, `:invalid_opts`, or `{:store_error, reason}`.
+  - Adapter-specific raw errors are wrapped as `{:store_error, reason}`.
+- **Event delivery scope**
+  - `Flux.subscribe_run/1` and `Flux.unsubscribe_run/1` manage PubSub subscriptions for run topics.
+  - Event delivery is best-effort; missing subscribers or publish failures do not change run success/failure outcomes.
+
+## Not guaranteed yet / non-goals
+
+- Durable distributed execution guarantees across nodes.
+- Exactly-once event delivery, replay, or durable event logs.
+- Persistent storage guarantees beyond the configured adapter behavior (default adapter is in-memory and node-local).
+- Asynchronous or parallel asset execution beyond the current deterministic stage-by-stage runtime model.
 
 ## Roadmap and release focus
 
-Current development is focused on stabilizing the core API and runtime behavior:
+- Add durable production-ready storage adapters with stronger operational guarantees.
+- Expand run query capabilities for richer operator UIs.
+- Improve event observability integrations (telemetry/export pipelines).
+- Add release packaging/versioning via Hex.
 
-- Harden the public API for asset inspection and run orchestration.
-- Improve planner/runner ergonomics and error reporting.
-- Add stronger durability and query capabilities for run storage.
-- Expand event delivery semantics and observability integrations.
-- Prepare Hex packaging and versioned release practices for broader adoption.
+## Release-readiness checklist
+
+- [x] Public API contracts in `lib/flux.ex` document accepted inputs, deterministic behavior, and exact return/error shapes.
+- [x] Run lifecycle semantics are documented and regression-tested.
+- [x] Storage error normalization contract (`:not_found`, `:invalid_opts`, `{:store_error, reason}`) is documented and regression-tested.
+- [x] Event delivery scope is explicitly documented as best-effort.
+- [x] Deterministic planning/stage behavior is asserted by tests.
 
 ## Installation
 

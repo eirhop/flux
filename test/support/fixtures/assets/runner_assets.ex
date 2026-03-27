@@ -31,6 +31,11 @@ defmodule Flux.Test.Fixtures.Assets.Runner.RunnerAssets do
     raise "boom"
   end
 
+  @asset depends_on: [:base]
+  def returns_error(_ctx, _deps) do
+    {:error, :domain_failure}
+  end
+
   @asset true
   def with_meta(_ctx, _deps) do
     {:ok,

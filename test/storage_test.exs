@@ -94,6 +94,13 @@ defmodule Flux.StorageTest do
     assert {:error, :invalid_opts} = Storage.list_runs(limit: 0)
   end
 
+  test "invalid adapter configuration is normalized as store_error" do
+    Application.put_env(:flux, :storage_adapter, Missing.Adapter)
+
+    assert {:error, {:store_error, {:invalid_storage_adapter, Missing.Adapter}}} =
+             Storage.get_run("run-1")
+  end
+
   defp sample_run do
     %Run{id: "run-1", target_refs: [], plan: nil, started_at: DateTime.utc_now()}
   end

@@ -41,6 +41,22 @@ defmodule FluxTest do
         {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {CrossModuleAssets, :publish_orders})}}
   end
 
+  defmodule FacadeRawErrorStore do
+    @behaviour Flux.Storage.Adapter
+
+    @impl true
+    def child_spec(_opts), do: :none
+
+    @impl true
+    def put_run(_run, _opts), do: {:error, :write_failed}
+
+    @impl true
+    def get_run(_run_id, _opts), do: {:error, :read_failed}
+
+    @impl true
+    def list_runs(_opts, _adapter_opts), do: {:error, :list_failed}
+  end
+
   require Logger
 
   alias Flux.Test.Fixtures.Assets.Basic.AdditionalAssets
@@ -64,9 +80,22 @@ defmodule FluxTest do
     assert {:ok, assets} = Flux.list_assets()
 
     assert Enum.map(assets, & &1.ref) == [
+             {CrossModuleAssets, :publish_orders},
              {SampleAssets, :extract_orders},
-             {SampleAssets, :normalize_orders},
-             {CrossModuleAssets, :publish_orders}
+             {SampleAssets, :normalize_orders}
+           ]
+  end
+
+  test "list_assets/0 sorts globally discovered assets by canonical ref" do
+    :ok = Flux.TestSetup.setup_asset_modules([SampleAssets, AdditionalAssets, CrossModuleAssets])
+
+    assert {:ok, assets} = Flux.list_assets()
+
+    assert Enum.map(assets, & &1.ref) == [
+             {AdditionalAssets, :archive_orders},
+             {CrossModuleAssets, :publish_orders},
+             {SampleAssets, :extract_orders},
+             {SampleAssets, :normalize_orders}
            ]
   end
 
@@ -86,10 +115,10 @@ defmodule FluxTest do
     assert {:ok, listed_assets} = Flux.list_assets()
 
     assert Enum.map(listed_assets, & &1.ref) == [
-             {SampleAssets, :extract_orders},
-             {SampleAssets, :normalize_orders},
+             {AdditionalAssets, :archive_orders},
              {CrossModuleAssets, :publish_orders},
-             {AdditionalAssets, :archive_orders}
+             {SampleAssets, :extract_orders},
+             {SampleAssets, :normalize_orders}
            ]
   end
 
@@ -179,9 +208,17 @@ defmodule FluxTest do
     assert {:ok, reloaded_assets} = Flux.list_assets()
 
     assert Enum.map(reloaded_assets, & &1.ref) == [
+             {CrossModuleAssets, :publish_orders},
              {SampleAssets, :extract_orders},
-             {SampleAssets, :normalize_orders},
-             {CrossModuleAssets, :publish_orders}
+             {SampleAssets, :normalize_orders}
            ]
+  end
+
+  test "public run facade returns canonical storage error contract" do
+    Application.put_env(:flux, :storage_adapter, FacadeRawErrorStore)
+
+    assert {:error, {:store_error, :read_failed}} = Flux.get_run("run-1")
+    assert {:error, {:store_error, :list_failed}} = Flux.list_runs()
+    assert {:error, :invalid_opts} = Flux.list_runs(status: :pending)
   end
 end
