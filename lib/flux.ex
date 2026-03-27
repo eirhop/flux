@@ -306,8 +306,8 @@ defmodule Flux do
   @typedoc """
   Identifier for a single run.
 
-  The exact representation is intentionally left open for now. A future
-  implementation may use UUIDs, monotonic integers, or another stable ID type.
+  Flux currently generates UUID-like string identifiers, but callers should
+  treat run IDs as opaque values.
   """
   @type run_id :: term()
 
@@ -350,11 +350,17 @@ defmodule Flux do
   @doc """
   List all registered assets.
 
-  This is the main discovery function for orchestrator applications that need
-  to render an asset catalog, search UI, or operator dashboard.
-
   Global discovery is scoped to modules configured under
   `config :flux, asset_modules: [...]`.
+
+  Deterministic behavior:
+
+    * returned assets are sorted by canonical ref (`{module, name}` ascending)
+
+  Returns:
+
+    * `{:ok, assets}` where `assets` is a list of `%Flux.Asset{}`
+    * `{:error, reason}` when the registry is unavailable or invalid
 
   ## Examples
 
@@ -369,8 +375,16 @@ defmodule Flux do
   @doc """
   List all assets for a specific module.
 
-  This is a targeted variant of `list_assets/0` and is useful when an
-  orchestrator wants to browse one asset module at a time.
+  Accepted input:
+
+    * `module` - module atom
+
+  Returns:
+
+    * `{:ok, assets}` where `assets` contains `%Flux.Asset{}` entries for
+      `module`
+    * `{:error, :not_asset_module}` when `module` does not expose Flux asset
+      metadata
 
   ## Examples
 
@@ -389,9 +403,15 @@ defmodule Flux do
   @doc """
   Fetch a single asset by reference.
 
-  This should return the full asset metadata, including documentation,
-  dependencies, source file, line number, kind, tags, and other compile-time
-  metadata captured for the asset.
+  Accepted input:
+
+    * `{module, name}` where both values are atoms
+
+  Returns:
+
+    * `{:ok, %Flux.Asset{}}` for a registered asset
+    * `{:error, :not_asset_module}` when `module` is not a Flux asset module
+    * `{:error, :asset_not_found}` when no asset named `name` exists
 
   ## Examples
 
@@ -433,9 +453,23 @@ defmodule Flux do
   @doc """
   List upstream assets for a target reference.
 
-  This query delegates to the startup-built global DAG index and returns asset
-  metadata rather than bare refs so operator tooling can inspect tags, docs,
-  source locations, and kinds together with dependency shape.
+  Accepted input:
+
+    * `{module, name}` target ref
+    * optional `opts`:
+      `:include_target`, `:transitive`, `:tags`, `:kinds`, `:modules`, `:names`
+
+  Deterministic behavior:
+
+    * default direction is `:upstream`
+    * default `include_target` is `false`
+    * results are in canonical ref order
+
+  Returns:
+
+    * `{:ok, assets}` where each entry is `%Flux.Asset{}`
+    * `{:error, :not_asset_module}` for invalid target modules
+    * graph/filter validation errors forwarded from `Flux.GraphIndex`
 
   ## Examples
 
@@ -459,6 +493,23 @@ defmodule Flux do
   @doc """
   List downstream assets for a target reference.
 
+  Accepted input:
+
+    * `{module, name}` target ref
+    * optional `opts`:
+      `:include_target`, `:transitive`, `:tags`, `:kinds`, `:modules`, `:names`
+
+  Deterministic behavior:
+
+    * default direction is `:downstream`
+    * results are in canonical ref order
+
+  Returns:
+
+    * `{:ok, assets}` where each entry is `%Flux.Asset{}`
+    * `{:error, :not_asset_module}` for invalid target modules
+    * graph/filter validation errors forwarded from `Flux.GraphIndex`
+
   ## Examples
 
       iex> Flux.downstream_assets({Unknown.Module, :normalize_orders})
@@ -481,8 +532,22 @@ defmodule Flux do
   @doc """
   Build a filtered dependency subgraph for a target reference.
 
-  This returns another `%Flux.GraphIndex{}` limited to the selected asset set,
-  which keeps graph queries and planner inputs on one canonical shape.
+  Accepted input:
+
+    * `{module, name}` target ref
+    * optional `opts`:
+      `:direction`, `:include_target`, `:transitive`, `:tags`, `:kinds`,
+      `:modules`, `:names`
+
+  Deterministic behavior:
+
+    * equivalent input and options produce equivalent graph index output
+
+  Returns:
+
+    * `{:ok, %Flux.GraphIndex{}}`
+    * `{:error, :not_asset_module}` for invalid target modules
+    * graph/filter validation errors forwarded from `Flux.GraphIndex`
 
   ## Examples
 
@@ -518,6 +583,20 @@ defmodule Flux do
     * target refs are normalized, deduplicated, and sorted
     * node refs inside each stage are sorted
     * stage number is computed as topological depth from source assets
+
+  Accepted input:
+
+    * one target ref `{module, name}` or a non-empty list of refs
+    * `opts` with `dependencies: :all | :none` (default `:all`)
+
+  Returns:
+
+    * `{:ok, %Flux.Plan{}}` for valid targets/options
+    * `{:error, :empty_targets}` for `[]`
+    * `{:error, :invalid_target_ref}` for malformed refs
+    * `{:error, :asset_not_found}` when any target ref is unknown
+    * `{:error, {:invalid_dependencies_mode, value}}` for unsupported
+      dependency mode values
 
   ## Examples
 
@@ -562,10 +641,26 @@ defmodule Flux do
   @doc """
   Start a run for the given asset.
 
-  By default, a run should include the full upstream dependency chain so that
-  asset dependencies automatically form the execution pipeline.
+  Accepted input:
 
-  Asset invocation and return contract for this first runner:
+    * target ref `{module, name}`
+    * `opts`:
+      * `dependencies: :all | :none` (default `:all`)
+      * `params: map()` (default `%{}`)
+
+  Deterministic behavior:
+
+    * planning and stage ordering are deterministic for identical inputs
+    * refs within each stage execute sequentially in canonical ref order
+
+  Runtime semantics:
+
+    * first asset failure halts the run and sets `run.status` to `:error`
+    * asset failures populate both `run.error` and `run.asset_results[ref].error`
+    * terminal result persistence is attempted even if execution failed
+    * run events are best-effort observability and do not affect correctness
+
+  Asset invocation contract:
 
     * assets are invoked as `def asset(ctx, deps)`
     * success must be `{:ok, %Flux.Asset.Output{}}`
@@ -576,13 +671,11 @@ defmodule Flux do
       iex> Flux.run({Unknown.Module, :fact_sales})
       {:error, :asset_not_found}
 
-  ## Expected implementation flow
+  Returns:
 
-    1. Resolve the target asset
-    2. Build the dependency graph or subgraph
-    3. Produce an execution plan
-    4. Execute stage-by-stage in deterministic order
-    5. Return run status, outputs, timings, and errors
+    * `{:ok, %Flux.Run{status: :ok}}` on success
+    * `{:error, %Flux.Run{status: :error}}` for execution failures
+    * `{:error, reason}` for preflight planning/storage validation failures
   """
   @spec run(asset_ref(), run_opts()) :: {:ok, Flux.Run.t()} | {:error, Flux.Run.t() | term()}
   def run({module, name}, opts \\ [])
@@ -593,8 +686,16 @@ defmodule Flux do
   @doc """
   Fetch one run by ID.
 
-  This should return the current or final run state, including status,
-  timestamps, execution details, errors, and possibly recent emitted events.
+  Accepted input:
+
+    * `run_id` as an opaque identifier
+
+  Returns:
+
+    * `{:ok, %Flux.Run{}}` when a run exists
+    * `{:error, :not_found}` when no run exists
+    * `{:error, :invalid_opts}` for adapter option validation failures
+    * `{:error, {:store_error, reason}}` for storage adapter/internal failures
 
   ## Examples
 
@@ -609,8 +710,20 @@ defmodule Flux do
   @doc """
   List runs.
 
-  This is intended for orchestrator screens that need to show historical and
-  currently executing runs.
+  Accepted options:
+
+    * `status: :running | :ok | :error`
+    * `limit: positive_integer()`
+
+  Deterministic behavior:
+
+    * results are returned newest-first
+
+  Returns:
+
+    * `{:ok, [run]}` where each entry is `%Flux.Run{}`
+    * `{:error, :invalid_opts}` for unsupported filters
+    * `{:error, {:store_error, reason}}` for storage adapter/internal failures
 
   ## Examples
 
@@ -630,12 +743,20 @@ defmodule Flux do
   @doc """
   Subscribe to live events for a single run.
 
-  This function is intentionally specific to runs so that the public API stays
-  explicit and can later grow with other subscription types if needed.
+  Accepted input:
 
-  The expected event model is structured run events rather than raw log lines.
-  Live event delivery is observability-only (best-effort) and is not part of
-  run correctness semantics.
+    * `run_id` as an opaque identifier
+
+  Delivery scope:
+
+    * events are broadcast on `"flux:run:<run_id>"`
+    * delivery is best-effort and observability-only
+    * subscription state does not affect execution/persistence semantics
+
+  Returns:
+
+    * `:ok` when subscribed
+    * `{:error, reason}` when PubSub returns an error
 
   ## Examples
 
@@ -650,7 +771,13 @@ defmodule Flux do
   @doc """
   Unsubscribe from live events for a single run.
 
-  Live subscriptions are observability-only and do not affect run execution,
+  Accepted input:
+
+    * `run_id` as an opaque identifier
+
+  Returns `:ok`.
+
+  Unsubscribing is observability-only and does not affect run execution,
   persistence, or final status outcomes.
 
   ## Examples

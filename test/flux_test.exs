@@ -41,6 +41,22 @@ defmodule FluxTest do
         {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {CrossModuleAssets, :publish_orders})}}
   end
 
+  defmodule FacadeRawErrorStore do
+    @behaviour Flux.Storage.Adapter
+
+    @impl true
+    def child_spec(_opts), do: :none
+
+    @impl true
+    def put_run(_run, _opts), do: {:error, :write_failed}
+
+    @impl true
+    def get_run(_run_id, _opts), do: {:error, :read_failed}
+
+    @impl true
+    def list_runs(_opts, _adapter_opts), do: {:error, :list_failed}
+  end
+
   require Logger
 
   alias Flux.Test.Fixtures.Assets.Basic.AdditionalAssets
@@ -183,5 +199,13 @@ defmodule FluxTest do
              {SampleAssets, :normalize_orders},
              {CrossModuleAssets, :publish_orders}
            ]
+  end
+
+  test "public run facade returns canonical storage error contract" do
+    Application.put_env(:flux, :storage_adapter, FacadeRawErrorStore)
+
+    assert {:error, {:store_error, :read_failed}} = Flux.get_run("run-1")
+    assert {:error, {:store_error, :list_failed}} = Flux.list_runs()
+    assert {:error, :invalid_opts} = Flux.list_runs(status: :pending)
   end
 end

@@ -39,6 +39,16 @@ defmodule Flux.RunnerTest do
 
     assert run.asset_results[{RunnerAssets, :base}].duration_ms >= 0
     assert run.asset_results[{RunnerAssets, :final}].status == :ok
+    assert run.asset_results[{RunnerAssets, :base}].stage == 0
+    assert run.asset_results[{RunnerAssets, :transform}].stage == 1
+    assert run.asset_results[{RunnerAssets, :final}].stage == 2
+
+    assert Enum.sort(Map.keys(run.asset_results)) == [
+             {RunnerAssets, :base},
+             {RunnerAssets, :final},
+             {RunnerAssets, :transform}
+           ]
+
     assert run.event_seq == 8
   end
 
@@ -72,6 +82,22 @@ defmodule Flux.RunnerTest do
     assert error.kind == :error
     assert is_list(error.stacktrace)
     assert error.message == "boom"
+  end
+
+  test "normalizes explicit asset error tuples into canonical run error payloads" do
+    assert {:error, run} = Flux.run({RunnerAssets, :returns_error})
+
+    ref = {RunnerAssets, :returns_error}
+
+    assert run.status == :error
+    assert run.error == %{ref: ref, stage: 1, reason: :domain_failure}
+    assert run.target_outputs == %{}
+
+    assert run.asset_results[ref].error == %{
+             kind: :error,
+             reason: :domain_failure,
+             stacktrace: []
+           }
   end
 
   test "preserves asset metadata in asset_results while keeping outputs as business values" do
@@ -114,6 +140,10 @@ defmodule Flux.RunnerTest do
 
   test "returns :not_found for missing runs" do
     assert {:error, :not_found} = Flux.get_run("missing-run-id")
+  end
+
+  test "returns invalid run params as canonical error payload from run/2" do
+    assert {:error, :invalid_run_params} = Flux.run({RunnerAssets, :final}, params: :not_a_map)
   end
 
   test "returns execution result even when terminal persistence fails" do
