@@ -112,14 +112,6 @@ Key settings:
 - Improve event observability integrations (telemetry/export pipelines).
 - Add release packaging/versioning via Hex.
 
-## Release-readiness checklist
-
-- [x] Public API contracts in `lib/flux.ex` document accepted inputs, deterministic behavior, and exact return/error shapes.
-- [x] Run lifecycle semantics are documented and regression-tested.
-- [x] Storage error normalization contract (`:not_found`, `:invalid_opts`, `{:store_error, reason}`) is documented and regression-tested.
-- [x] Event delivery scope is explicitly documented as best-effort.
-- [x] Deterministic planning/stage behavior is asserted by tests.
-
 ## Installation
 
 Flux is not published on Hex yet.
