@@ -1,14 +1,14 @@
-defmodule Flux.Test.Fixtures.Assets.Runner.RunnerAssets do
-  use Flux.Assets
+defmodule Favn.Test.Fixtures.Assets.Runner.RunnerAssets do
+  use Favn.Assets
 
   @asset true
   def base(ctx, _deps) do
-    {:ok, %Flux.Asset.Output{output: {:base, ctx.params[:partition]}}}
+    {:ok, %Favn.Asset.Output{output: {:base, ctx.params[:partition]}}}
   end
 
   @asset depends_on: [:base]
   def transform(_ctx, deps) do
-    {:ok, %Flux.Asset.Output{output: {:transform, Map.fetch!(deps, {__MODULE__, :base})}}}
+    {:ok, %Favn.Asset.Output{output: {:transform, Map.fetch!(deps, {__MODULE__, :base})}}}
   end
 
   @asset depends_on: [:base]
@@ -18,12 +18,12 @@ defmodule Flux.Test.Fixtures.Assets.Runner.RunnerAssets do
 
   @asset depends_on: [:transform]
   def final(_ctx, deps) do
-    {:ok, %Flux.Asset.Output{output: {:final, Map.fetch!(deps, {__MODULE__, :transform})}}}
+    {:ok, %Favn.Asset.Output{output: {:final, Map.fetch!(deps, {__MODULE__, :transform})}}}
   end
 
   @asset depends_on: [:transform]
   def target_only(_ctx, deps) do
-    {:ok, %Flux.Asset.Output{output: map_size(deps)}}
+    {:ok, %Favn.Asset.Output{output: map_size(deps)}}
   end
 
   @asset depends_on: [:base]
@@ -39,15 +39,15 @@ defmodule Flux.Test.Fixtures.Assets.Runner.RunnerAssets do
   @asset true
   def with_meta(_ctx, _deps) do
     {:ok,
-     %Flux.Asset.Output{
+     %Favn.Asset.Output{
        output: {:rows, [1, 2, 3]},
        meta: %{row_count: 123, source: :test}
      }}
   end
 end
 
-defmodule Flux.Test.Fixtures.Assets.Runner.TerminalFailingStore do
-  @behaviour Flux.Storage.Adapter
+defmodule Favn.Test.Fixtures.Assets.Runner.TerminalFailingStore do
+  @behaviour Favn.Storage.Adapter
 
   @counter_key {__MODULE__, :put_count}
 

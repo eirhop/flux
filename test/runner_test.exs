@@ -1,18 +1,18 @@
-defmodule Flux.RunnerTest do
+defmodule Favn.RunnerTest do
   use ExUnit.Case
 
-  alias Flux.Test.Fixtures.Assets.Runner.RunnerAssets
-  alias Flux.Test.Fixtures.Assets.Runner.TerminalFailingStore
+  alias Favn.Test.Fixtures.Assets.Runner.RunnerAssets
+  alias Favn.Test.Fixtures.Assets.Runner.TerminalFailingStore
 
   setup do
-    state = Flux.TestSetup.capture_state()
+    state = Favn.TestSetup.capture_state()
 
-    :ok = Flux.TestSetup.setup_asset_modules([RunnerAssets], reload_graph?: true)
-    :ok = Flux.TestSetup.configure_storage_adapter(Flux.Storage.Adapter.Memory, [])
-    :ok = Flux.TestSetup.clear_memory_storage_adapter()
+    :ok = Favn.TestSetup.setup_asset_modules([RunnerAssets], reload_graph?: true)
+    :ok = Favn.TestSetup.configure_storage_adapter(Favn.Storage.Adapter.Memory, [])
+    :ok = Favn.TestSetup.clear_memory_storage_adapter()
 
     on_exit(fn ->
-      Flux.TestSetup.restore_state(state, reload_graph?: true, clear_storage_adapter_env?: true)
+      Favn.TestSetup.restore_state(state, reload_graph?: true, clear_storage_adapter_env?: true)
     end)
 
     :ok
@@ -20,7 +20,7 @@ defmodule Flux.RunnerTest do
 
   test "runs deterministic stage-by-stage execution with context and deps map" do
     assert {:ok, run} =
-             Flux.run({RunnerAssets, :final},
+             Favn.run({RunnerAssets, :final},
                dependencies: :all,
                params: %{partition: "2026-03-25"}
              )
@@ -53,7 +53,7 @@ defmodule Flux.RunnerTest do
   end
 
   test "supports dependencies: :none target-only runs" do
-    assert {:ok, run} = Flux.run({RunnerAssets, :target_only}, dependencies: :none)
+    assert {:ok, run} = Favn.run({RunnerAssets, :target_only}, dependencies: :none)
 
     assert run.status == :ok
     assert Map.keys(run.outputs) == [{RunnerAssets, :target_only}]
@@ -61,20 +61,20 @@ defmodule Flux.RunnerTest do
   end
 
   test "captures invalid return shape as a structured run failure" do
-    assert {:error, run} = Flux.run({RunnerAssets, :invalid_return})
+    assert {:error, run} = Favn.run({RunnerAssets, :invalid_return})
 
     assert run.status == :error
     assert %{ref: {RunnerAssets, :invalid_return}} = run.error
 
     assert run.asset_results[{RunnerAssets, :invalid_return}].error.reason ==
              {:invalid_return_shape, {:ok, :bad_shape},
-              expected: "{:ok, %Flux.Asset.Output{}} | {:error, reason}"}
+              expected: "{:ok, %Favn.Asset.Output{}} | {:error, reason}"}
 
     assert run.event_seq == 6
   end
 
   test "captures raised exceptions with stacktrace details" do
-    assert {:error, run} = Flux.run({RunnerAssets, :crashes})
+    assert {:error, run} = Favn.run({RunnerAssets, :crashes})
 
     assert run.status == :error
 
@@ -85,7 +85,7 @@ defmodule Flux.RunnerTest do
   end
 
   test "normalizes explicit asset error tuples into canonical run error payloads" do
-    assert {:error, run} = Flux.run({RunnerAssets, :returns_error})
+    assert {:error, run} = Favn.run({RunnerAssets, :returns_error})
 
     ref = {RunnerAssets, :returns_error}
 
@@ -101,7 +101,7 @@ defmodule Flux.RunnerTest do
   end
 
   test "preserves asset metadata in asset_results while keeping outputs as business values" do
-    assert {:ok, run} = Flux.run({RunnerAssets, :with_meta})
+    assert {:ok, run} = Favn.run({RunnerAssets, :with_meta})
 
     ref = {RunnerAssets, :with_meta}
     output = {:rows, [1, 2, 3]}
@@ -113,48 +113,48 @@ defmodule Flux.RunnerTest do
   end
 
   test "persists run records for get_run/1" do
-    assert {:ok, run} = Flux.run({RunnerAssets, :final})
+    assert {:ok, run} = Favn.run({RunnerAssets, :final})
 
-    assert {:ok, fetched} = Flux.get_run(run.id)
+    assert {:ok, fetched} = Favn.get_run(run.id)
     assert fetched.id == run.id
     assert fetched.status == :ok
     assert fetched.target_refs == run.target_refs
   end
 
   test "lists runs with status filter and limit in newest-first order" do
-    assert {:ok, ok_run} = Flux.run({RunnerAssets, :final})
-    assert {:error, error_run} = Flux.run({RunnerAssets, :crashes})
+    assert {:ok, ok_run} = Favn.run({RunnerAssets, :final})
+    assert {:error, error_run} = Favn.run({RunnerAssets, :crashes})
 
-    assert {:ok, all_runs} = Flux.list_runs()
+    assert {:ok, all_runs} = Favn.list_runs()
     assert Enum.map(all_runs, & &1.id) == [error_run.id, ok_run.id]
 
-    assert {:ok, running_runs} = Flux.list_runs(status: :running)
+    assert {:ok, running_runs} = Favn.list_runs(status: :running)
     assert running_runs == []
 
-    assert {:ok, failed_runs} = Flux.list_runs(status: :error)
+    assert {:ok, failed_runs} = Favn.list_runs(status: :error)
     assert Enum.map(failed_runs, & &1.id) == [error_run.id]
 
-    assert {:ok, limited_runs} = Flux.list_runs(limit: 1)
+    assert {:ok, limited_runs} = Favn.list_runs(limit: 1)
     assert Enum.map(limited_runs, & &1.id) == [error_run.id]
   end
 
   test "returns :not_found for missing runs" do
-    assert {:error, :not_found} = Flux.get_run("missing-run-id")
+    assert {:error, :not_found} = Favn.get_run("missing-run-id")
   end
 
   test "returns invalid run params as canonical error payload from run/2" do
-    assert {:error, :invalid_run_params} = Flux.run({RunnerAssets, :final}, params: :not_a_map)
+    assert {:error, :invalid_run_params} = Favn.run({RunnerAssets, :final}, params: :not_a_map)
   end
 
   test "returns execution result even when terminal persistence fails" do
-    :ok = Flux.TestSetup.configure_storage_adapter(TerminalFailingStore, [])
+    :ok = Favn.TestSetup.configure_storage_adapter(TerminalFailingStore, [])
     TerminalFailingStore.reset!()
 
-    assert {:ok, run} = Flux.run({RunnerAssets, :final})
+    assert {:ok, run} = Favn.run({RunnerAssets, :final})
     assert run.status == :ok
   end
 
   test "rejects unsupported list_runs status filter values" do
-    assert {:error, :invalid_opts} = Flux.list_runs(status: :pending)
+    assert {:error, :invalid_opts} = Favn.list_runs(status: :pending)
   end
 end

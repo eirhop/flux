@@ -1,5 +1,30 @@
-# Favn
-**State:** Not recommended for production, API and DSL may change
+<div align="center">
+  <img src="docs/images/favn-logo-transparent.png" alt="Favn logo" width="300" />
+  <p><strong>Asset-first orchestration for Elixir</strong></p>
+  <p>Define business logic as assets. Let Favn discover dependencies, plan runs, and execute deterministic workflows.</p>
+</div>
+
+<p align="center">
+  <strong>Status:</strong> Not recommended for production. API and DSL may change.
+</p>
+
+<p align="center">
+  <a href="#quickstart">Quickstart</a> •
+  <a href="#configuration">Configuration</a> •
+  <a href="#current-limitations">Current limitations</a> •
+  <a href="#roadmap-and-release-focus">Roadmap</a> •
+  <a href="#installation">Installation</a> • 
+  <a href="/FEATURES.md">Features</a> • 
+  <a href="/lib/favn.ex">Docs</a>
+
+</p>
+
+## Favn at a glance
+
+- Plain Elixir functions become assets with metadata and dependencies.
+- Dependency graphs are discovered automatically from asset definitions.
+- Runs are planned deterministically and executed in dependency order.
+- Runtime state, outputs, and run events are exposed through a small public API.
 
 ## Introduction
 
@@ -22,7 +47,7 @@ Favn is built to be:
 
 Whether you're building ETL pipelines, system integrations, workflows, or AI-driven processes, Favn acts as the layer that holds everything together and ensures it runs as expected.
 
-Favn doesn’t just run your workflows—it takes care of them.
+Favn doesn’t just run your workflows. It takes care of them.
 
 ## Quickstart
 

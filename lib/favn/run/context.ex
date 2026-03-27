@@ -1,9 +1,9 @@
-defmodule Flux.Run.Context do
+defmodule Favn.Run.Context do
   @moduledoc """
   Runtime context passed to each asset invocation.
   """
 
-  alias Flux.Ref
+  alias Favn.Ref
 
   @type t :: %__MODULE__{
           run_id: String.t(),

@@ -1,16 +1,16 @@
-defmodule Flux.Asset do
+defmodule Favn.Asset do
   @moduledoc """
-  Canonical asset metadata captured from an authored Flux asset.
+  Canonical asset metadata captured from an authored Favn asset.
 
-  `Flux.Asset` is the normalized shape used by the rest of Flux for
+  `Favn.Asset` is the normalized shape used by the rest of Favn for
   introspection, dependency resolution, and execution planning.
 
   This module owns validation of the final canonical asset shape after the DSL
   has normalized authoring-friendly input into runtime-ready values.
   """
 
-  alias Flux.Ref
-  alias Flux.Asset.Output
+  alias Favn.Ref
+  alias Favn.Asset.Output
 
   @typedoc """
   Supported asset kinds.
@@ -58,10 +58,10 @@ defmodule Flux.Asset do
   ]
 
   @doc """
-  Validate a canonical `%Flux.Asset{}`.
+  Validate a canonical `%Favn.Asset{}`.
 
   This function expects an already-built asset struct. In particular,
-  `depends_on` must already be a list of `Flux.Ref.t()` values.
+  `depends_on` must already be a list of `Favn.Ref.t()` values.
 
   ## Raises
 
@@ -112,12 +112,12 @@ defmodule Flux.Asset do
 
       dependency ->
         raise ArgumentError,
-              "asset depends_on must be a list of Flux.Ref values, got: #{inspect(dependency)}"
+              "asset depends_on must be a list of Favn.Ref values, got: #{inspect(dependency)}"
     end)
   end
 
   defp validate_depends_on!(depends_on) do
     raise ArgumentError,
-          "asset depends_on must be a list of Flux.Ref values, got: #{inspect(depends_on)}"
+          "asset depends_on must be a list of Favn.Ref values, got: #{inspect(depends_on)}"
   end
 end

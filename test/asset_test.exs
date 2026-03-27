@@ -1,8 +1,8 @@
-defmodule Flux.AssetTest do
+defmodule Favn.AssetTest do
   use ExUnit.Case, async: true
 
-  alias Flux.Asset
-  alias Flux.Ref
+  alias Favn.Asset
+  alias Favn.Ref
 
   test "defaults optional fields" do
     asset = %Asset{
@@ -92,7 +92,7 @@ defmodule Flux.AssetTest do
   end
 
   test "validate!/1 rejects invalid canonical depends_on values" do
-    assert_raise ArgumentError, ~r/asset depends_on must be a list of Flux\.Ref values/, fn ->
+    assert_raise ArgumentError, ~r/asset depends_on must be a list of Favn\.Ref values/, fn ->
       Asset.validate!(%Asset{
         module: Example.Assets,
         name: :bad_deps,

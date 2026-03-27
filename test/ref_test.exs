@@ -1,7 +1,7 @@
-defmodule Flux.RefTest do
+defmodule Favn.RefTest do
   use ExUnit.Case, async: true
 
-  alias Flux.Ref
+  alias Favn.Ref
 
   test "builds a canonical ref" do
     ref = Ref.new(Example.Assets, :normalize_orders)

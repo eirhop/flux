@@ -1,15 +1,15 @@
-defmodule Flux.GraphIndexTest do
+defmodule Favn.GraphIndexTest do
   use ExUnit.Case
 
-  alias Flux.Test.Fixtures.Assets.Graph.ReportingAssets
-  alias Flux.Test.Fixtures.Assets.Graph.SourceAssets
-  alias Flux.Test.Fixtures.Assets.Graph.WarehouseAssets
+  alias Favn.Test.Fixtures.Assets.Graph.ReportingAssets
+  alias Favn.Test.Fixtures.Assets.Graph.SourceAssets
+  alias Favn.Test.Fixtures.Assets.Graph.WarehouseAssets
 
   setup do
-    state = Flux.TestSetup.capture_state()
+    state = Favn.TestSetup.capture_state()
 
     on_exit(fn ->
-      Flux.TestSetup.restore_state(state, reload_graph?: true)
+      Favn.TestSetup.restore_state(state, reload_graph?: true)
     end)
 
     :ok
@@ -17,18 +17,18 @@ defmodule Flux.GraphIndexTest do
 
   test "builds a global DAG index with upstream, downstream, transitive closures, and topological order" do
     :ok =
-      Flux.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
+      Favn.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
         reload_graph?: true
       )
 
-    assert {:ok, upstream} = Flux.GraphIndex.upstream_of({WarehouseAssets, :fact_sales})
+    assert {:ok, upstream} = Favn.GraphIndex.upstream_of({WarehouseAssets, :fact_sales})
 
     assert upstream == [
              {WarehouseAssets, :normalize_customers},
              {WarehouseAssets, :normalize_orders}
            ]
 
-    assert {:ok, downstream} = Flux.GraphIndex.downstream_of({WarehouseAssets, :normalize_orders})
+    assert {:ok, downstream} = Favn.GraphIndex.downstream_of({WarehouseAssets, :normalize_orders})
 
     assert downstream == [
              {WarehouseAssets, :fact_sales},
@@ -36,7 +36,7 @@ defmodule Flux.GraphIndexTest do
            ]
 
     assert {:ok, transitive_upstream} =
-             Flux.GraphIndex.transitive_upstream_of({ReportingAssets, :dashboard})
+             Favn.GraphIndex.transitive_upstream_of({ReportingAssets, :dashboard})
 
     assert transitive_upstream == [
              {SourceAssets, :raw_customers},
@@ -47,7 +47,7 @@ defmodule Flux.GraphIndexTest do
            ]
 
     assert {:ok, transitive_downstream} =
-             Flux.GraphIndex.transitive_downstream_of({SourceAssets, :raw_orders})
+             Favn.GraphIndex.transitive_downstream_of({SourceAssets, :raw_orders})
 
     assert transitive_downstream == [
              {WarehouseAssets, :normalize_orders},
@@ -55,7 +55,7 @@ defmodule Flux.GraphIndexTest do
              {ReportingAssets, :dashboard}
            ]
 
-    assert {:ok, topo_order} = Flux.GraphIndex.topological_order()
+    assert {:ok, topo_order} = Favn.GraphIndex.topological_order()
 
     assert Enum.find_index(topo_order, &(&1 == {SourceAssets, :raw_orders})) <
              Enum.find_index(topo_order, &(&1 == {WarehouseAssets, :normalize_orders}))
@@ -66,12 +66,12 @@ defmodule Flux.GraphIndexTest do
 
   test "selects related assets with filters and direct traversal options" do
     :ok =
-      Flux.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
+      Favn.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
         reload_graph?: true
       )
 
     assert {:ok, assets} =
-             Flux.GraphIndex.related_assets({ReportingAssets, :dashboard},
+             Favn.GraphIndex.related_assets({ReportingAssets, :dashboard},
                direction: :upstream,
                tags: [:warehouse]
              )
@@ -82,7 +82,7 @@ defmodule Flux.GraphIndexTest do
            ]
 
     assert {:ok, both_neighbors} =
-             Flux.GraphIndex.related_assets({WarehouseAssets, :normalize_orders},
+             Favn.GraphIndex.related_assets({WarehouseAssets, :normalize_orders},
                direction: :both,
                transitive: false,
                include_target: false
@@ -97,12 +97,12 @@ defmodule Flux.GraphIndexTest do
 
   test "builds filtered subgraphs rooted at a target reference" do
     :ok =
-      Flux.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
+      Favn.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
         reload_graph?: true
       )
 
     assert {:ok, subgraph} =
-             Flux.GraphIndex.subgraph({ReportingAssets, :dashboard},
+             Favn.GraphIndex.subgraph({ReportingAssets, :dashboard},
                direction: :upstream,
                tags: [:warehouse]
              )
@@ -122,36 +122,36 @@ defmodule Flux.GraphIndexTest do
 
   test "returns invalid_opts for invalid graph query options" do
     :ok =
-      Flux.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
+      Favn.TestSetup.setup_asset_modules([SourceAssets, WarehouseAssets, ReportingAssets],
         reload_graph?: true
       )
 
     assert {:error, :invalid_opts} =
-             Flux.GraphIndex.related_assets({ReportingAssets, :dashboard}, direction: :sideways)
+             Favn.GraphIndex.related_assets({ReportingAssets, :dashboard}, direction: :sideways)
 
     assert {:error, :invalid_opts} =
-             Flux.GraphIndex.related_assets({ReportingAssets, :dashboard}, transitive: :yes)
+             Favn.GraphIndex.related_assets({ReportingAssets, :dashboard}, transitive: :yes)
 
     assert {:error, :invalid_opts} =
-             Flux.GraphIndex.related_assets({ReportingAssets, :dashboard}, include_target: 1)
+             Favn.GraphIndex.related_assets({ReportingAssets, :dashboard}, include_target: 1)
 
     assert {:error, :invalid_opts} =
-             Flux.GraphIndex.related_assets({ReportingAssets, :dashboard}, tags: :warehouse)
+             Favn.GraphIndex.related_assets({ReportingAssets, :dashboard}, tags: :warehouse)
 
     assert {:error, :invalid_opts} =
-             Flux.GraphIndex.related_assets({ReportingAssets, :dashboard}, kinds: :table)
+             Favn.GraphIndex.related_assets({ReportingAssets, :dashboard}, kinds: :table)
 
     assert {:error, :invalid_opts} =
-             Flux.GraphIndex.related_assets({ReportingAssets, :dashboard},
+             Favn.GraphIndex.related_assets({ReportingAssets, :dashboard},
                modules: ReportingAssets
              )
 
     assert {:error, :invalid_opts} =
-             Flux.GraphIndex.subgraph({ReportingAssets, :dashboard}, names: :dashboard)
+             Favn.GraphIndex.subgraph({ReportingAssets, :dashboard}, names: :dashboard)
   end
 
   test "reports missing dependencies during graph construction" do
-    missing = %Flux.Asset{
+    missing = %Favn.Asset{
       module: __MODULE__,
       name: :missing_dependency,
       ref: {__MODULE__, :missing_dependency},
@@ -164,11 +164,11 @@ defmodule Flux.GraphIndexTest do
     assert {:error,
             {:missing_dependency, {__MODULE__, :missing_dependency},
              {__MODULE__, :does_not_exist}}} =
-             Flux.GraphIndex.build_index([missing])
+             Favn.GraphIndex.build_index([missing])
   end
 
   test "rejects cycles during graph construction" do
-    a = %Flux.Asset{
+    a = %Favn.Asset{
       module: __MODULE__,
       name: :a,
       ref: {__MODULE__, :a},
@@ -178,7 +178,7 @@ defmodule Flux.GraphIndexTest do
       depends_on: [{__MODULE__, :b}]
     }
 
-    b = %Flux.Asset{
+    b = %Favn.Asset{
       module: __MODULE__,
       name: :b,
       ref: {__MODULE__, :b},
@@ -188,7 +188,7 @@ defmodule Flux.GraphIndexTest do
       depends_on: [{__MODULE__, :a}]
     }
 
-    assert {:error, {:cycle, cycle}} = Flux.GraphIndex.build_index([a, b])
+    assert {:error, {:cycle, cycle}} = Favn.GraphIndex.build_index([a, b])
     assert cycle == [{__MODULE__, :a}, {__MODULE__, :b}, {__MODULE__, :a}]
   end
 end

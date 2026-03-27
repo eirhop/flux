@@ -1,11 +1,11 @@
-defmodule Flux.StorageTest do
+defmodule Favn.StorageTest do
   use ExUnit.Case, async: false
 
-  alias Flux.Run
-  alias Flux.Storage
+  alias Favn.Run
+  alias Favn.Storage
 
   defmodule RawErrorStore do
-    @behaviour Flux.Storage.Adapter
+    @behaviour Favn.Storage.Adapter
 
     @impl true
     def child_spec(_opts), do: {:error, :child_spec_failed}
@@ -21,7 +21,7 @@ defmodule Flux.StorageTest do
   end
 
   defmodule NormalizedErrorStore do
-    @behaviour Flux.Storage.Adapter
+    @behaviour Favn.Storage.Adapter
 
     @impl true
     def child_spec(_opts), do: {:error, {:store_error, :already_normalized}}
@@ -37,7 +37,7 @@ defmodule Flux.StorageTest do
   end
 
   defmodule CanonicalErrorStore do
-    @behaviour Flux.Storage.Adapter
+    @behaviour Favn.Storage.Adapter
 
     @impl true
     def child_spec(_opts), do: :none
@@ -53,8 +53,8 @@ defmodule Flux.StorageTest do
   end
 
   setup do
-    previous_store = Application.get_env(:flux, :storage_adapter)
-    previous_store_opts = Application.get_env(:flux, :storage_adapter_opts)
+    previous_store = Application.get_env(:favn, :storage_adapter)
+    previous_store_opts = Application.get_env(:favn, :storage_adapter_opts)
 
     on_exit(fn ->
       restore_env(:storage_adapter, previous_store)
@@ -65,13 +65,13 @@ defmodule Flux.StorageTest do
   end
 
   test "child_specs/0 does not double-wrap normalized store errors" do
-    Application.put_env(:flux, :storage_adapter, NormalizedErrorStore)
+    Application.put_env(:favn, :storage_adapter, NormalizedErrorStore)
 
     assert {:error, {:store_error, :already_normalized}} = Storage.child_specs()
   end
 
   test "storage entrypoints wrap raw adapter errors as store_error" do
-    Application.put_env(:flux, :storage_adapter, RawErrorStore)
+    Application.put_env(:favn, :storage_adapter, RawErrorStore)
 
     assert {:error, {:store_error, :child_spec_failed}} = Storage.child_specs()
     assert {:error, {:store_error, :write_failed}} = Storage.put_run(sample_run())
@@ -80,7 +80,7 @@ defmodule Flux.StorageTest do
   end
 
   test "storage entrypoints preserve canonical error shapes" do
-    Application.put_env(:flux, :storage_adapter, CanonicalErrorStore)
+    Application.put_env(:favn, :storage_adapter, CanonicalErrorStore)
 
     assert :ok = Storage.put_run(sample_run()) |> expect_error(:invalid_opts)
     assert :ok = Storage.get_run("missing") |> expect_error(:not_found)
@@ -88,14 +88,14 @@ defmodule Flux.StorageTest do
   end
 
   test "list_runs/1 validates invalid options before adapter call" do
-    Application.put_env(:flux, :storage_adapter, RawErrorStore)
+    Application.put_env(:favn, :storage_adapter, RawErrorStore)
 
     assert {:error, :invalid_opts} = Storage.list_runs(status: :pending)
     assert {:error, :invalid_opts} = Storage.list_runs(limit: 0)
   end
 
   test "invalid adapter configuration is normalized as store_error" do
-    Application.put_env(:flux, :storage_adapter, Missing.Adapter)
+    Application.put_env(:favn, :storage_adapter, Missing.Adapter)
 
     assert {:error, {:store_error, {:invalid_storage_adapter, Missing.Adapter}}} =
              Storage.get_run("run-1")
@@ -107,6 +107,6 @@ defmodule Flux.StorageTest do
 
   defp expect_error({:error, reason}, expected) when reason == expected, do: :ok
 
-  defp restore_env(key, nil), do: Application.delete_env(:flux, key)
-  defp restore_env(key, value), do: Application.put_env(:flux, key, value)
+  defp restore_env(key, nil), do: Application.delete_env(:favn, key)
+  defp restore_env(key, value), do: Application.put_env(:favn, key, value)
 end

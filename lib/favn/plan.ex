@@ -1,4 +1,4 @@
-defmodule Flux.Plan do
+defmodule Favn.Plan do
   @moduledoc """
   Deterministic execution plan for one logical run request.
 
@@ -9,7 +9,7 @@ defmodule Flux.Plan do
   after all refs in previous stages are satisfied.
   """
 
-  alias Flux.Ref
+  alias Favn.Ref
 
   @typedoc """
   Execution action for one planned node.
@@ -34,7 +34,7 @@ defmodule Flux.Plan do
 
   @type t :: %__MODULE__{
           target_refs: [Ref.t()],
-          dependencies: Flux.dependencies_mode(),
+          dependencies: Favn.dependencies_mode(),
           nodes: %{required(Ref.t()) => plan_node()},
           topo_order: [Ref.t()],
           stages: [stage()]

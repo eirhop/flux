@@ -1,8 +1,8 @@
-defmodule Flux.Ref do
+defmodule Favn.Ref do
   @moduledoc """
   Canonical asset references.
 
-  Flux uses `{module, name}` tuples as the public and internal reference shape
+  Favn uses `{module, name}` tuples as the public and internal reference shape
   for assets.
   """
 

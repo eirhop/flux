@@ -1,9 +1,9 @@
-defmodule Flux.GraphIndex do
+defmodule Favn.GraphIndex do
   @moduledoc """
-  Global dependency graph index for configured Flux assets.
+  Global dependency graph index for configured Favn assets.
 
-  `Flux.GraphIndex` builds a read-only directed acyclic graph (DAG) from the
-  canonical asset catalog loaded by `Flux.Registry`. The index is computed
+  `Favn.GraphIndex` builds a read-only directed acyclic graph (DAG) from the
+  canonical asset catalog loaded by `Favn.Registry`. The index is computed
   during application startup and cached in `:persistent_term` for fast,
   repeated read access.
 
@@ -15,13 +15,13 @@ defmodule Flux.GraphIndex do
     * deterministic topological ordering for later planning layers
     * transitive dependency queries for graph inspection APIs
 
-  Flux models dependencies as a DAG rather than a tree. Shared upstream assets
+  Favn models dependencies as a DAG rather than a tree. Shared upstream assets
   are therefore allowed and are expected to execute at most once within a run,
   even when multiple downstream assets depend on them.
   """
 
-  alias Flux.Asset
-  alias Flux.Ref
+  alias Favn.Asset
+  alias Favn.Ref
 
   @index_key {__MODULE__, :index}
 
@@ -45,7 +45,7 @@ defmodule Flux.GraphIndex do
           {:missing_dependency, Ref.t(), Ref.t()}
           | {:cycle, [Ref.t()]}
           | :invalid_opts
-          | Flux.Registry.error()
+          | Favn.Registry.error()
 
   @typedoc """
   Direction used when selecting related assets or subgraphs.
@@ -92,7 +92,7 @@ defmodule Flux.GraphIndex do
   """
   @spec load() :: :ok | {:error, error()}
   def load do
-    with {:ok, assets} <- Flux.Registry.list_assets(),
+    with {:ok, assets} <- Favn.Registry.list_assets(),
          {:ok, %__MODULE__{} = index} <- build_index(assets) do
       :persistent_term.put(@index_key, index)
       :ok
@@ -173,7 +173,7 @@ defmodule Flux.GraphIndex do
   @doc """
   Return a filtered subgraph rooted at a specific asset reference.
 
-  The returned value is another `%Flux.GraphIndex{}` limited to the selected
+  The returned value is another `%Favn.GraphIndex{}` limited to the selected
   refs so callers can reuse the same traversal and lookup helpers against a
   target-specific graph view.
   """

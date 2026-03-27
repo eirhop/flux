@@ -1,31 +1,31 @@
-defmodule Flux.Runtime.Runner do
+defmodule Favn.Runtime.Runner do
   @moduledoc """
-  Runtime execution runner for Flux runs.
+  Runtime execution runner for Favn runs.
 
   This module contains the concrete in-memory runner used by the public
-  `Flux.run/2` facade.
+  `Favn.run/2` facade.
   """
 
-  alias Flux.Run
-  alias Flux.Asset.Output
-  alias Flux.Run.AssetResult
-  alias Flux.Run.Context
+  alias Favn.Run
+  alias Favn.Asset.Output
+  alias Favn.Run.AssetResult
+  alias Favn.Run.Context
 
   @typedoc """
   Options supported by the in-memory runner.
   """
   @type run_opts :: [
-          dependencies: Flux.dependencies_mode(),
+          dependencies: Favn.dependencies_mode(),
           params: map()
         ]
 
-  @spec run(Flux.asset_ref(), run_opts()) :: {:ok, Run.t()} | {:error, Run.t() | term()}
+  @spec run(Favn.asset_ref(), run_opts()) :: {:ok, Run.t()} | {:error, Run.t() | term()}
   def run(target_ref, opts \\ []) when is_list(opts) do
     dependencies = Keyword.get(opts, :dependencies, :all)
     params = Keyword.get(opts, :params, %{})
 
     with :ok <- validate_params(params),
-         {:ok, plan} <- Flux.plan_run(target_ref, dependencies: dependencies) do
+         {:ok, plan} <- Favn.plan_run(target_ref, dependencies: dependencies) do
       run = %Run{
         id: new_run_id(),
         target_refs: plan.target_refs,
@@ -34,7 +34,7 @@ defmodule Flux.Runtime.Runner do
         params: params
       }
 
-      with :ok <- Flux.Storage.put_run(run) do
+      with :ok <- Favn.Storage.put_run(run) do
         run = emit_run_event(run, :run_started, %{target_refs: run.target_refs})
         result = execute_plan(run)
         _ = persist_terminal_result(result)
@@ -46,9 +46,9 @@ defmodule Flux.Runtime.Runner do
   defp validate_params(params) when is_map(params), do: :ok
   defp validate_params(_params), do: {:error, :invalid_run_params}
 
-  @spec persist_terminal_result({:ok | :error, Run.t()}) :: :ok | {:error, Flux.Storage.error()}
+  @spec persist_terminal_result({:ok | :error, Run.t()}) :: :ok | {:error, Favn.Storage.error()}
   defp persist_terminal_result({_status, %Run{} = run}) do
-    Flux.Storage.put_run(run)
+    Favn.Storage.put_run(run)
   end
 
   defp execute_plan(%Run{} = run) do
@@ -95,7 +95,7 @@ defmodule Flux.Runtime.Runner do
     node = Map.fetch!(run.plan.nodes, ref)
     run = emit_run_event(run, :asset_started, %{}, ref: ref, stage: stage)
 
-    with {:ok, asset} <- Flux.Registry.get_asset(ref),
+    with {:ok, asset} <- Favn.Registry.get_asset(ref),
          {:ok, deps} <- dependency_outputs(run, node.upstream),
          ctx <- build_context(run, ref, stage),
          {:ok, %Output{} = asset_output} <- invoke_asset(asset, ctx, deps) do
@@ -172,7 +172,7 @@ defmodule Flux.Runtime.Runner do
         other ->
           {:error,
            {:invalid_return_shape, other,
-            expected: "{:ok, %Flux.Asset.Output{}} | {:error, reason}"}}
+            expected: "{:ok, %Favn.Asset.Output{}} | {:error, reason}"}}
       end
     rescue
       error ->
@@ -257,7 +257,7 @@ defmodule Flux.Runtime.Runner do
     next_seq = run.event_seq + 1
 
     _ =
-      Flux.Runtime.Events.publish_run_event(run.id, event, %{
+      Favn.Runtime.Events.publish_run_event(run.id, event, %{
         seq: next_seq,
         ref: Keyword.get(opts, :ref),
         stage: Keyword.get(opts, :stage),

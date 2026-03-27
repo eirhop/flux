@@ -1,14 +1,14 @@
-defmodule Flux.MixProject do
+defmodule Favn.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :flux,
+      app: :favn,
       version: "0.1.0",
       description: "Asset-oriented workflow orchestration for Elixir applications",
       elixir: "~> 1.17",
-      source_url: "https://github.com/eirhop/flux",
-      homepage_url: "https://github.com/eirhop/flux",
+      source_url: "https://github.com/eirhop/favn",
+      homepage_url: "https://github.com/eirhop/favn",
       docs: [
         main: "readme",
         extras: ["README.md"]
@@ -23,7 +23,7 @@ defmodule Flux.MixProject do
   def application do
     [
       extra_applications: [:logger, :phoenix_pubsub],
-      mod: {Flux.Application, []}
+      mod: {Favn.Application, []}
     ]
   end
 
@@ -38,7 +38,7 @@ defmodule Flux.MixProject do
   defp package do
     [
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => "https://github.com/eirhop/flux"}
+      links: %{"GitHub" => "https://github.com/eirhop/favn"}
     ]
   end
 end

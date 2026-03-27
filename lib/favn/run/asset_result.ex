@@ -1,9 +1,9 @@
-defmodule Flux.Run.AssetResult do
+defmodule Favn.Run.AssetResult do
   @moduledoc """
   Per-asset execution outcome captured during a run.
   """
 
-  alias Flux.Ref
+  alias Favn.Ref
 
   @type error_kind :: :error | :exit | :throw
 

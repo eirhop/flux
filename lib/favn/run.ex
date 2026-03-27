@@ -1,20 +1,20 @@
-defmodule Flux.Run do
+defmodule Favn.Run do
   @moduledoc """
-  Canonical in-memory representation of one Flux run.
+  Canonical in-memory representation of one Favn run.
 
   The first runner stores run state in memory and returns this struct directly
   to callers. Persistence and subscriptions are intentionally deferred.
   """
 
-  alias Flux.Ref
-  alias Flux.Run.AssetResult
+  alias Favn.Ref
+  alias Favn.Run.AssetResult
 
   @type status :: :running | :ok | :error
 
   @type t :: %__MODULE__{
           id: String.t(),
           target_refs: [Ref.t()],
-          plan: Flux.Plan.t(),
+          plan: Favn.Plan.t(),
           status: status(),
           event_seq: non_neg_integer(),
           started_at: DateTime.t(),

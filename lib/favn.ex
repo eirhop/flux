@@ -1,17 +1,17 @@
-defmodule Flux do
+defmodule Favn do
   @moduledoc """
-  Flux is a library for defining, inspecting, and orchestrating asset-based workflows in Elixir.
+  Favn is a library for defining, inspecting, and orchestrating asset-based workflows in Elixir.
 
   It is built around the idea that each step in a workflow should be expressed as a normal,
-  business-oriented Elixir function, while Flux adds the metadata and orchestration needed to
+  business-oriented Elixir function, while Favn adds the metadata and orchestration needed to
   discover assets, understand their dependencies, and execute them as part of a run.
 
-  Flux is intended to be the core library behind orchestrator applications, operator dashboards,
+  Favn is intended to be the core library behind orchestrator applications, operator dashboards,
   scheduling systems, and other tools that need a stable API for working with assets and runs.
 
-  ## What Flux provides
+  ## What Favn provides
 
-  Flux is designed for applications that need to:
+  Favn is designed for applications that need to:
 
     * define assets as plain Elixir functions
     * attach documentation and metadata directly to those assets through @asset annotations
@@ -28,8 +28,8 @@ defmodule Flux do
   An asset is a function that represents a meaningful unit of work in a workflow, such as
   extracting data, transforming a dataset, or producing a modeled output.
 
-  Assets are intended to be authored in modules that `use Flux.Assets`. At compile time,
-  Flux will collect metadata such as:
+  Assets are intended to be authored in modules that `use Favn.Assets`. At compile time,
+  Favn will collect metadata such as:
 
     * asset name
     * documentation
@@ -38,21 +38,21 @@ defmodule Flux do
     * kind
     * tags
 
-  This keeps the workflow definition close to the business logic while still allowing Flux to
+  This keeps the workflow definition close to the business logic while still allowing Favn to
   introspect and orchestrate the workflow later.
 
   ### Dependencies
 
-  Assets can depend on other assets. Flux uses those dependency declarations to derive the
+  Assets can depend on other assets. Favn uses those dependency declarations to derive the
   execution graph automatically.
 
-  Flux models those relationships as a directed acyclic graph (DAG), not as a strict tree.
+  Favn models those relationships as a directed acyclic graph (DAG), not as a strict tree.
   Shared upstream assets are therefore allowed, cycles are rejected, and a later runtime
   planner can ensure an asset runs at most once in a single run even when multiple downstream
   assets depend on it.
 
   In practice, this means users generally do not need to manually define pipelines. When an
-  asset is run, Flux can compute the dependency graph for the requested target and form the
+  asset is run, Favn can compute the dependency graph for the requested target and form the
   execution pipeline from that graph.
 
   ### Runs
@@ -69,7 +69,7 @@ defmodule Flux do
 
   ### Live events
 
-  Flux is intended to expose structured run events so that consumers can subscribe to the
+  Favn is intended to expose structured run events so that consumers can subscribe to the
   progress of an active run.
 
   This is designed for use cases such as:
@@ -81,17 +81,17 @@ defmodule Flux do
 
   ## Authoring assets
 
-  Assets are defined in normal modules using `Flux.Assets`.
+  Assets are defined in normal modules using `Favn.Assets`.
 
   A simplified example:
 
       defmodule MyApp.SalesETL do
-        use Flux.Assets
+        use Favn.Assets
 
         @doc "Extract raw orders from the sales source"
         @asset true
         def extract_orders(_ctx, _deps) do
-          {:ok, %Flux.Asset.Output{output: [%{id: 1, total: 100}], meta: %{source: :sales}}}
+          {:ok, %Favn.Asset.Output{output: [%{id: 1, total: 100}], meta: %{source: :sales}}}
         end
 
         @doc "Normalize extracted orders"
@@ -104,14 +104,14 @@ defmodule Flux do
               Map.put(order, :normalized, true)
             end)
 
-          {:ok, %Flux.Asset.Output{output: normalized, meta: %{normalized_count: length(normalized)}}}
+          {:ok, %Favn.Asset.Output{output: normalized, meta: %{normalized_count: length(normalized)}}}
         end
       end
 
   Cross-module dependencies are also expected to be supported:
 
       defmodule MyApp.GoldETL do
-        use Flux.Assets
+        use Favn.Assets
 
         alias MyApp.SalesETL
 
@@ -119,7 +119,7 @@ defmodule Flux do
         @asset depends_on: [{SalesETL, :normalize_orders}]
         def fact_sales(_ctx, deps) do
           normalized_orders = Map.fetch!(deps, {SalesETL, :normalize_orders})
-          {:ok, %Flux.Asset.Output{output: %{rows: normalized_orders}}}
+          {:ok, %Favn.Asset.Output{output: %{rows: normalized_orders}}}
         end
       end
 
@@ -128,50 +128,50 @@ defmodule Flux do
 
   ## Using the library
 
-  `Flux` is the main public entrypoint for the library.
+  `Favn` is the main public entrypoint for the library.
 
   Typical usage from an orchestrator app or operator tool:
 
-      Flux.list_assets()
+      Favn.list_assets()
 
-      Flux.list_assets(MyApp.SalesETL)
+      Favn.list_assets(MyApp.SalesETL)
 
-      Flux.get_asset({MyApp.SalesETL, :normalize_orders})
+      Favn.get_asset({MyApp.SalesETL, :normalize_orders})
 
-      Flux.upstream_assets({MyApp.GoldETL, :fact_sales})
+      Favn.upstream_assets({MyApp.GoldETL, :fact_sales})
 
-      Flux.dependency_graph({MyApp.GoldETL, :fact_sales}, tags: [:warehouse])
+      Favn.dependency_graph({MyApp.GoldETL, :fact_sales}, tags: [:warehouse])
 
-      Flux.run({MyApp.GoldETL, :fact_sales})
+      Favn.run({MyApp.GoldETL, :fact_sales})
 
-      Flux.run({MyApp.GoldETL, :fact_sales}, dependencies: :none)
+      Favn.run({MyApp.GoldETL, :fact_sales}, dependencies: :none)
 
-      Flux.get_run(run_id)
+      Favn.get_run(run_id)
 
-      Flux.list_runs()
+      Favn.list_runs()
 
-      Flux.list_runs(status: :running)
+      Favn.list_runs(status: :running)
 
-      Flux.subscribe_run(run_id)
+      Favn.subscribe_run(run_id)
 
   ## Setup in a host application
 
-  Flux is an OTP application, not a standalone server you start with a
-  dedicated `flux` command.
+  Favn is an OTP application, not a standalone server you start with a
+  dedicated `favn` command.
 
-  A consumer application typically sets Flux up in four steps:
+  A consumer application typically sets Favn up in four steps:
 
-    1. add `:flux` as a dependency in `mix.exs`
-    2. define one or more asset modules with `use Flux.Assets`
-    3. register those modules under `config :flux, asset_modules: [...]`
+    1. add `:favn` as a dependency in `mix.exs`
+    2. define one or more asset modules with `use Favn.Assets`
+    3. register those modules under `config :favn, asset_modules: [...]`
     4. start the host application normally
 
-  Flux is not published on Hex yet, so it should be installed directly
+  Favn is not published on Hex yet, so it should be installed directly
   from the repository. A minimal dependency declaration looks like this:
 
       defp deps do
         [
-          {:flux, git: "https://github.com/eirhop/flux.git", tag: "v0.1.0"}
+          {:favn, git: "https://github.com/eirhop/favn.git", tag: "v0.1.0"}
         ]
       end
 
@@ -180,7 +180,7 @@ defmodule Flux do
 
       defp deps do
         [
-          {:flux, "~> 0.1.0"}
+          {:favn, "~> 0.1.0"}
         ]
       end
 
@@ -195,29 +195,29 @@ defmodule Flux do
 
       import Config
 
-      config :flux,
+      config :favn,
         asset_modules: [
           MyApp.SalesETL,
           MyApp.GoldETL
         ]
 
   The configured module list is the global discovery scope used by
-  `Flux.list_assets/0` and `Flux.get_asset/1`.
+  `Favn.list_assets/0` and `Favn.get_asset/1`.
 
-  Run event subscriptions use Phoenix PubSub and default to `Flux.PubSub`.
+  Run event subscriptions use Phoenix PubSub and default to `Favn.PubSub`.
   Host applications can override the pubsub server name:
 
       import Config
 
-      config :flux,
+      config :favn,
         pubsub_name: MyApp.PubSub
 
-  ## Starting Flux
+  ## Starting Favn
 
-  There is no separate Flux server process that operators start manually.
+  There is no separate Favn server process that operators start manually.
 
-  When the host application boots, Mix starts the `:flux` application as a
-  dependency, and `Flux.Application` loads the configured asset registry during
+  When the host application boots, Mix starts the `:favn` application as a
+  dependency, and `Favn.Application` loads the configured asset registry during
   application startup.
 
   In practice, that means the right startup command is the normal startup
@@ -225,16 +225,16 @@ defmodule Flux do
 
     * `iex -S mix` for interactive local development
     * `mix run --no-halt` for a long-running non-interactive OTP process
-    * framework-specific commands such as `mix phx.server` when Flux is used
+    * framework-specific commands such as `mix phx.server` when Favn is used
       inside a Phoenix application
 
   If the host application is already running under releases, supervision, or a
-  framework entrypoint, Flux starts automatically as part of that boot process.
+  framework entrypoint, Favn starts automatically as part of that boot process.
 
   ## Configuration lifecycle
 
   The global asset registry is loaded from application config during startup and
-  then kept in memory for fast lookups. Flux also builds a global dependency
+  then kept in memory for fast lookups. Favn also builds a global dependency
   graph index during startup from that same canonical asset catalog.
 
   The graph index is intended to stay read-only for the lifetime of the booted
@@ -242,9 +242,9 @@ defmodule Flux do
   transitive dependency queries, and deterministic topological ordering for
   later execution planning.
 
-  That means changes to `config :flux, asset_modules: [...]` are not picked up
+  That means changes to `config :favn, asset_modules: [...]` are not picked up
   automatically by an already-running node. In normal usage, update the config
-  and restart the host application so Flux reloads the configured registry and
+  and restart the host application so Favn reloads the configured registry and
   dependency graph during boot.
 
   ## Public API responsibilities
@@ -264,7 +264,7 @@ defmodule Flux do
 
   ## Design goals
 
-  Flux aims to keep workflow code close to the business domain while still providing the
+  Favn aims to keep workflow code close to the business domain while still providing the
   operational features needed by orchestration and observability tooling.
 
   In practice, that means:
@@ -282,7 +282,7 @@ defmodule Flux do
 
     * `README.md` is canonical for release status, roadmap planning, and the
       feature/limitation matrix.
-    * `Flux` moduledoc is canonical for API behavior, contracts, and examples.
+    * `Favn` moduledoc is canonical for API behavior, contracts, and examples.
 
   """
 
@@ -291,12 +291,12 @@ defmodule Flux do
 
   The public API should consistently use `{module, asset_name}` references.
   """
-  @type asset_ref :: Flux.Ref.t()
+  @type asset_ref :: Favn.Ref.t()
 
   @typedoc """
-  Canonical asset metadata returned by Flux inspection APIs.
+  Canonical asset metadata returned by Favn inspection APIs.
   """
-  @type asset :: Flux.Asset.t()
+  @type asset :: Favn.Asset.t()
 
   @typedoc """
   Asset inspection errors returned by lookup APIs.
@@ -306,7 +306,7 @@ defmodule Flux do
   @typedoc """
   Identifier for a single run.
 
-  Flux currently generates UUID-like string identifiers, but callers should
+  Favn currently generates UUID-like string identifiers, but callers should
   treat run IDs as opaque values.
   """
   @type run_id :: term()
@@ -351,7 +351,7 @@ defmodule Flux do
   List all registered assets.
 
   Global discovery is scoped to modules configured under
-  `config :flux, asset_modules: [...]`.
+  `config :favn, asset_modules: [...]`.
 
   Deterministic behavior:
 
@@ -359,17 +359,17 @@ defmodule Flux do
 
   Returns:
 
-    * `{:ok, assets}` where `assets` is a list of `%Flux.Asset{}`
+    * `{:ok, assets}` where `assets` is a list of `%Favn.Asset{}`
     * `{:error, reason}` when the registry is unavailable or invalid
 
   ## Examples
 
-      iex> Flux.list_assets()
+      iex> Favn.list_assets()
       {:ok, []}
   """
   @spec list_assets() :: {:ok, [asset()]} | {:error, term()}
   def list_assets do
-    with {:ok, assets} <- Flux.Registry.list_assets() do
+    with {:ok, assets} <- Favn.Registry.list_assets() do
       {:ok, Enum.sort_by(assets, & &1.ref)}
     end
   end
@@ -383,20 +383,20 @@ defmodule Flux do
 
   Returns:
 
-    * `{:ok, assets}` where `assets` contains `%Flux.Asset{}` entries for
+    * `{:ok, assets}` where `assets` contains `%Favn.Asset{}` entries for
       `module`
-    * `{:error, :not_asset_module}` when `module` does not expose Flux asset
+    * `{:error, :not_asset_module}` when `module` does not expose Favn asset
       metadata
 
   ## Examples
 
-      iex> Flux.list_assets(Unknown.Module)
+      iex> Favn.list_assets(Unknown.Module)
       {:error, :not_asset_module}
   """
   @spec list_assets(module()) :: {:ok, [asset()]} | {:error, asset_error()}
   def list_assets(module) when is_atom(module) do
     if asset_module?(module) do
-      {:ok, module.__flux_assets__()}
+      {:ok, module.__favn_assets__()}
     else
       {:error, :not_asset_module}
     end
@@ -411,19 +411,19 @@ defmodule Flux do
 
   Returns:
 
-    * `{:ok, %Flux.Asset{}}` for a registered asset
-    * `{:error, :not_asset_module}` when `module` is not a Flux asset module
+    * `{:ok, %Favn.Asset{}}` for a registered asset
+    * `{:error, :not_asset_module}` when `module` is not a Favn asset module
     * `{:error, :asset_not_found}` when no asset named `name` exists
 
   ## Examples
 
-      iex> Flux.get_asset({Unknown.Module, :normalize_orders})
+      iex> Favn.get_asset({Unknown.Module, :normalize_orders})
       {:error, :not_asset_module}
   """
   @spec get_asset(asset_ref()) :: {:ok, asset()} | {:error, asset_error()}
   def get_asset({module, name}) when is_atom(module) and is_atom(name) do
     if asset_module?(module) do
-      with {:ok, asset} <- Flux.Registry.get_asset({module, name}) do
+      with {:ok, asset} <- Favn.Registry.get_asset({module, name}) do
         {:ok, asset}
       else
         {:error, {:duplicate_asset, _ref}} -> {:error, :asset_not_found}
@@ -437,7 +437,7 @@ defmodule Flux do
   @typedoc """
   Direction used by dependency graph inspection APIs.
   """
-  @type dependency_direction :: Flux.GraphIndex.direction()
+  @type dependency_direction :: Favn.GraphIndex.direction()
 
   @typedoc """
   Options for dependency graph inspection APIs.
@@ -446,8 +446,8 @@ defmodule Flux do
           direction: dependency_direction(),
           include_target: boolean(),
           transitive: boolean(),
-          tags: [Flux.Asset.tag()],
-          kinds: [Flux.Asset.kind()],
+          tags: [Favn.Asset.tag()],
+          kinds: [Favn.Asset.kind()],
           modules: [module()],
           names: [atom()]
         ]
@@ -469,13 +469,13 @@ defmodule Flux do
 
   Returns:
 
-    * `{:ok, assets}` where each entry is `%Flux.Asset{}`
+    * `{:ok, assets}` where each entry is `%Favn.Asset{}`
     * `{:error, :not_asset_module}` for invalid target modules
-    * graph/filter validation errors forwarded from `Flux.GraphIndex`
+    * graph/filter validation errors forwarded from `Favn.GraphIndex`
 
   ## Examples
 
-      iex> Flux.upstream_assets({Unknown.Module, :normalize_orders})
+      iex> Favn.upstream_assets({Unknown.Module, :normalize_orders})
       {:error, :not_asset_module}
   """
   @spec upstream_assets(asset_ref(), graph_opts()) ::
@@ -483,7 +483,7 @@ defmodule Flux do
   def upstream_assets({module, name}, opts \\ [])
       when is_atom(module) and is_atom(name) and is_list(opts) do
     if asset_module?(module) do
-      Flux.GraphIndex.related_assets(
+      Favn.GraphIndex.related_assets(
         {module, name},
         opts |> Keyword.put_new(:direction, :upstream) |> Keyword.put_new(:include_target, false)
       )
@@ -508,13 +508,13 @@ defmodule Flux do
 
   Returns:
 
-    * `{:ok, assets}` where each entry is `%Flux.Asset{}`
+    * `{:ok, assets}` where each entry is `%Favn.Asset{}`
     * `{:error, :not_asset_module}` for invalid target modules
-    * graph/filter validation errors forwarded from `Flux.GraphIndex`
+    * graph/filter validation errors forwarded from `Favn.GraphIndex`
 
   ## Examples
 
-      iex> Flux.downstream_assets({Unknown.Module, :normalize_orders})
+      iex> Favn.downstream_assets({Unknown.Module, :normalize_orders})
       {:error, :not_asset_module}
   """
   @spec downstream_assets(asset_ref(), graph_opts()) ::
@@ -522,7 +522,7 @@ defmodule Flux do
   def downstream_assets({module, name}, opts \\ [])
       when is_atom(module) and is_atom(name) and is_list(opts) do
     if asset_module?(module) do
-      Flux.GraphIndex.related_assets(
+      Favn.GraphIndex.related_assets(
         {module, name},
         Keyword.put_new(opts, :direction, :downstream)
       )
@@ -547,21 +547,21 @@ defmodule Flux do
 
   Returns:
 
-    * `{:ok, %Flux.GraphIndex{}}`
+    * `{:ok, %Favn.GraphIndex{}}`
     * `{:error, :not_asset_module}` for invalid target modules
-    * graph/filter validation errors forwarded from `Flux.GraphIndex`
+    * graph/filter validation errors forwarded from `Favn.GraphIndex`
 
   ## Examples
 
-      iex> Flux.dependency_graph({Unknown.Module, :normalize_orders})
+      iex> Favn.dependency_graph({Unknown.Module, :normalize_orders})
       {:error, :not_asset_module}
   """
   @spec dependency_graph(asset_ref(), graph_opts()) ::
-          {:ok, Flux.GraphIndex.t()} | {:error, asset_error() | term()}
+          {:ok, Favn.GraphIndex.t()} | {:error, asset_error() | term()}
   def dependency_graph({module, name}, opts \\ [])
       when is_atom(module) and is_atom(name) and is_list(opts) do
     if asset_module?(module) do
-      Flux.GraphIndex.subgraph({module, name}, opts)
+      Favn.GraphIndex.subgraph({module, name}, opts)
     else
       {:error, :not_asset_module}
     end
@@ -570,9 +570,9 @@ defmodule Flux do
   @doc false
   @spec asset_module?(module()) :: boolean()
   def asset_module?(module) when is_atom(module) do
-    function_exported?(module, :__flux_asset_module__, 0) and
-      function_exported?(module, :__flux_assets__, 0) and
-      module.__flux_asset_module__() == true
+    function_exported?(module, :__favn_asset_module__, 0) and
+      function_exported?(module, :__favn_assets__, 0) and
+      module.__favn_asset_module__() == true
   end
 
   @doc """
@@ -593,7 +593,7 @@ defmodule Flux do
 
   Returns:
 
-    * `{:ok, %Flux.Plan{}}` for valid targets/options
+    * `{:ok, %Favn.Plan{}}` for valid targets/options
     * `{:error, :empty_targets}` for `[]`
     * `{:error, :invalid_target_ref}` for malformed refs
     * `{:error, :asset_not_found}` when any target ref is unknown
@@ -602,15 +602,15 @@ defmodule Flux do
 
   ## Examples
 
-      iex> Flux.plan_run({Unknown.Module, :fact_sales})
+      iex> Favn.plan_run({Unknown.Module, :fact_sales})
       {:error, :asset_not_found}
 
-      iex> Flux.plan_run([])
+      iex> Favn.plan_run([])
       {:error, :empty_targets}
 
   ## Output shape
 
-      %Flux.Plan{
+      %Favn.Plan{
         target_refs: [{MyApp.GoldETL, :fact_sales}],
         dependencies: :all,
         topo_order: [
@@ -635,9 +635,9 @@ defmodule Flux do
       }
   """
   @spec plan_run(asset_ref() | [asset_ref()], plan_run_opts()) ::
-          {:ok, Flux.Plan.t()} | {:error, term()}
+          {:ok, Favn.Plan.t()} | {:error, term()}
   def plan_run(targets, opts \\ []) when is_list(opts) do
-    Flux.Planner.plan(targets, opts)
+    Favn.Planner.plan(targets, opts)
   end
 
   @doc """
@@ -665,24 +665,24 @@ defmodule Flux do
   Asset invocation contract:
 
     * assets are invoked as `def asset(ctx, deps)`
-    * success must be `{:ok, %Flux.Asset.Output{}}`
+    * success must be `{:ok, %Favn.Asset.Output{}}`
     * failure must be `{:error, reason}`
 
   ## Examples
 
-      iex> Flux.run({Unknown.Module, :fact_sales})
+      iex> Favn.run({Unknown.Module, :fact_sales})
       {:error, :asset_not_found}
 
   Returns:
 
-    * `{:ok, %Flux.Run{status: :ok}}` on success
-    * `{:error, %Flux.Run{status: :error}}` for execution failures
+    * `{:ok, %Favn.Run{status: :ok}}` on success
+    * `{:error, %Favn.Run{status: :error}}` for execution failures
     * `{:error, reason}` for preflight planning/storage validation failures
   """
-  @spec run(asset_ref(), run_opts()) :: {:ok, Flux.Run.t()} | {:error, Flux.Run.t() | term()}
+  @spec run(asset_ref(), run_opts()) :: {:ok, Favn.Run.t()} | {:error, Favn.Run.t() | term()}
   def run({module, name}, opts \\ [])
       when is_atom(module) and is_atom(name) and is_list(opts) do
-    Flux.Runtime.Runner.run({module, name}, opts)
+    Favn.Runtime.Runner.run({module, name}, opts)
   end
 
   @doc """
@@ -694,19 +694,19 @@ defmodule Flux do
 
   Returns:
 
-    * `{:ok, %Flux.Run{}}` when a run exists
+    * `{:ok, %Favn.Run{}}` when a run exists
     * `{:error, :not_found}` when no run exists
     * `{:error, :invalid_opts}` for adapter option validation failures
     * `{:error, {:store_error, reason}}` for storage adapter/internal failures
 
   ## Examples
 
-      iex> Flux.get_run("run_123")
+      iex> Favn.get_run("run_123")
       {:error, :not_found}
   """
-  @spec get_run(run_id()) :: {:ok, Flux.Run.t()} | {:error, run_error()}
+  @spec get_run(run_id()) :: {:ok, Favn.Run.t()} | {:error, run_error()}
   def get_run(run_id) do
-    Flux.Storage.get_run(run_id)
+    Favn.Storage.get_run(run_id)
   end
 
   @doc """
@@ -723,23 +723,23 @@ defmodule Flux do
 
   Returns:
 
-    * `{:ok, [run]}` where each entry is `%Flux.Run{}`
+    * `{:ok, [run]}` where each entry is `%Favn.Run{}`
     * `{:error, :invalid_opts}` for unsupported filters
     * `{:error, {:store_error, reason}}` for storage adapter/internal failures
 
   ## Examples
 
-      iex> {:ok, runs} = Flux.list_runs()
+      iex> {:ok, runs} = Favn.list_runs()
       iex> is_list(runs)
       true
 
-      iex> {:ok, running_runs} = Flux.list_runs(status: :running)
+      iex> {:ok, running_runs} = Favn.list_runs(status: :running)
       iex> is_list(running_runs)
       true
   """
-  @spec list_runs(list_runs_opts()) :: {:ok, [Flux.Run.t()]} | {:error, run_error()}
+  @spec list_runs(list_runs_opts()) :: {:ok, [Favn.Run.t()]} | {:error, run_error()}
   def list_runs(opts \\ []) when is_list(opts) do
-    Flux.Storage.list_runs(opts)
+    Favn.Storage.list_runs(opts)
   end
 
   @doc """
@@ -751,7 +751,7 @@ defmodule Flux do
 
   Delivery scope:
 
-    * events are broadcast on `"flux:run:<run_id>"`
+    * events are broadcast on `"favn:run:<run_id>"`
     * delivery is best-effort and observability-only
     * subscription state does not affect execution/persistence semantics
 
@@ -762,12 +762,12 @@ defmodule Flux do
 
   ## Examples
 
-      iex> Flux.subscribe_run("run_123")
+      iex> Favn.subscribe_run("run_123")
       :ok
   """
   @spec subscribe_run(run_id()) :: :ok | {:error, term()}
   def subscribe_run(run_id) do
-    Flux.Runtime.Events.subscribe_run(run_id)
+    Favn.Runtime.Events.subscribe_run(run_id)
   end
 
   @doc """
@@ -784,11 +784,11 @@ defmodule Flux do
 
   ## Examples
 
-      iex> Flux.unsubscribe_run("run_123")
+      iex> Favn.unsubscribe_run("run_123")
       :ok
   """
   @spec unsubscribe_run(run_id()) :: :ok
   def unsubscribe_run(run_id) do
-    Flux.Runtime.Events.unsubscribe_run(run_id)
+    Favn.Runtime.Events.unsubscribe_run(run_id)
   end
 end

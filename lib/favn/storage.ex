@@ -1,15 +1,15 @@
-defmodule Flux.Storage do
+defmodule Favn.Storage do
   @moduledoc """
   Storage facade that delegates run persistence to the configured storage adapter.
 
-  This module is the canonical storage boundary used by `Flux` and
-  `Flux.Runtime.Runner`. It validates adapter modules, normalizes adapter
+  This module is the canonical storage boundary used by `Favn` and
+  `Favn.Runtime.Runner`. It validates adapter modules, normalizes adapter
   responses, and preserves stable error shapes for callers.
   """
 
-  alias Flux.Run
+  alias Favn.Run
 
-  @default_adapter Flux.Storage.Adapter.Memory
+  @default_adapter Favn.Storage.Adapter.Memory
 
   @type error :: :not_found | :invalid_opts | {:store_error, term()}
 
@@ -39,7 +39,7 @@ defmodule Flux.Storage do
   end
 
   @doc """
-  Persist one `%Flux.Run{}` value through the configured adapter.
+  Persist one `%Favn.Run{}` value through the configured adapter.
 
   Returns `:ok` on success, otherwise a normalized storage error.
   """
@@ -53,7 +53,7 @@ defmodule Flux.Storage do
 
   Returns `{:error, :not_found}` when the run ID does not exist.
   """
-  @spec get_run(Flux.run_id()) :: {:ok, Run.t()} | {:error, error()}
+  @spec get_run(Favn.run_id()) :: {:ok, Run.t()} | {:error, error()}
   def get_run(run_id) do
     adapter_call(fn adapter, opts -> adapter.get_run(run_id, opts) end)
   end
@@ -66,7 +66,7 @@ defmodule Flux.Storage do
     * `:status` - one of `:running | :ok | :error`
     * `:limit` - positive integer max result count
   """
-  @spec list_runs(Flux.list_runs_opts()) :: {:ok, [Run.t()]} | {:error, error()}
+  @spec list_runs(Favn.list_runs_opts()) :: {:ok, [Run.t()]} | {:error, error()}
   def list_runs(opts \\ []) when is_list(opts) do
     with :ok <- validate_list_opts(opts) do
       adapter_call(fn adapter, adapter_opts -> adapter.list_runs(opts, adapter_opts) end)
@@ -76,11 +76,11 @@ defmodule Flux.Storage do
   @doc """
   Return the configured storage adapter module.
 
-  Defaults to `Flux.Storage.Adapter.Memory`.
+  Defaults to `Favn.Storage.Adapter.Memory`.
   """
   @spec adapter_module() :: module()
   def adapter_module do
-    Application.get_env(:flux, :storage_adapter, @default_adapter)
+    Application.get_env(:favn, :storage_adapter, @default_adapter)
   end
 
   @doc """
@@ -88,7 +88,7 @@ defmodule Flux.Storage do
   """
   @spec adapter_opts() :: keyword()
   def adapter_opts do
-    Application.get_env(:flux, :storage_adapter_opts, [])
+    Application.get_env(:favn, :storage_adapter_opts, [])
   end
 
   @doc """

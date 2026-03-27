@@ -17,3 +17,8 @@ All notable changes to this project are documented in this file.
 - Baseline CI workflow for compilation and test coverage of the public API surface.
 - Installation documentation for this first release recommends pinning the public git tag (`v0.1.0`) when adding Flux as a dependency.
 - Test environment restoration isolates storage adapter configuration across tests/doctests for repeatable public API validation.
+
+## [0.1.1] - 2026-03-27
+
+### Changed
+- Full renaming of repo from Flux to Favn

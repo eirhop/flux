@@ -1,8 +1,8 @@
-# Flux Feature Roadmap
+# Favn Feature Roadmap
 
 ## Versioning model
 
-Flux is planned in three stages:
+Favn is planned in three stages:
 
 * **v0.1** — testable core release
 * **v0.2** — complete core usable in development
@@ -38,7 +38,7 @@ Ship a small but coherent core library that can be installed, exercised, and tes
 
 **Scope**
 
-Provide a way to define business-oriented assets as normal Elixir functions with Flux metadata attached through `use Flux.Assets` and `@asset` annotations.
+Provide a way to define business-oriented assets as normal Elixir functions with Favn metadata attached through `use Favn.Assets` and `@asset` annotations.
 
 **Todo list**
 
@@ -58,9 +58,9 @@ Expose a stable public surface for listing configured assets and fetching asset 
 
 **Todo list**
 
-* [x] Verify `Flux.list_assets/0` returns the configured global asset catalog.
-* [x] Verify `Flux.list_assets/1` returns only assets for a target module.
-* [x] Verify `Flux.get_asset/1` returns canonical metadata.
+* [x] Verify `Favn.list_assets/0` returns the configured global asset catalog.
+* [x] Verify `Favn.list_assets/1` returns only assets for a target module.
+* [x] Verify `Favn.get_asset/1` returns canonical metadata.
 * [x] Verify unknown modules return `:not_asset_module`.
 * [x] Verify missing assets return `:asset_not_found`.
 * [x] Add regression tests for duplicate or conflicting asset references.
@@ -77,9 +77,9 @@ Model dependencies as a DAG and expose read APIs for upstream/downstream inspect
 
 * [x] Verify DAG validation rejects cycles.
 * [x] Verify shared upstream dependencies are supported.
-* [x] Verify `Flux.upstream_assets/2` returns deterministic results.
-* [x] Verify `Flux.downstream_assets/2` returns deterministic results.
-* [x] Verify `Flux.dependency_graph/2` respects filters for tags, kinds, modules, names, direction, transitive, and include_target.
+* [x] Verify `Favn.upstream_assets/2` returns deterministic results.
+* [x] Verify `Favn.downstream_assets/2` returns deterministic results.
+* [x] Verify `Favn.dependency_graph/2` respects filters for tags, kinds, modules, names, direction, transitive, and include_target.
 * [x] Add tests for empty and single-node graphs.
 
 #### 4. Deterministic run planner
@@ -128,8 +128,8 @@ Persist run metadata through the configured storage adapter and expose `get_run/
 
 * [x] Verify run records are created for started runs.
 * [x] Verify final statuses are persisted.
-* [x] Verify `Flux.get_run/1` returns expected run state.
-* [x] Verify `Flux.list_runs/1` supports status filtering and limit.
+* [x] Verify `Favn.get_run/1` returns expected run state.
+* [x] Verify `Favn.list_runs/1` supports status filtering and limit.
 * [x] Verify storage-layer failures are normalized into public errors.
 * [x] Add regression tests for invalid options.
 * [x] Add regression coverage for test-state isolation so storage adapter changes do not leak across tests/doctests.
@@ -144,8 +144,8 @@ Expose live run event subscription as a best-effort observability mechanism for 
 
 **Todo list**
 
-* [x] Verify `Flux.subscribe_run/1` subscribes successfully.
-* [x] Verify `Flux.unsubscribe_run/1` unsubscribes successfully.
+* [x] Verify `Favn.subscribe_run/1` subscribes successfully.
+* [x] Verify `Favn.unsubscribe_run/1` unsubscribes successfully.
 * [x] Verify run lifecycle events are emitted in expected order.
 * [x] Verify event delivery is observability-only and not part of run correctness.
 * [x] Add tests for event payload consistency.
@@ -156,7 +156,7 @@ Expose live run event subscription as a best-effort observability mechanism for 
 
 **Scope**
 
-Support use of Flux as an OTP dependency configured through host app application config.
+Support use of Favn as an OTP dependency configured through host app application config.
 
 **Todo list**
 
@@ -179,6 +179,7 @@ Ensure the repository is ready for a public `v0.1.0` release from a packaging an
 * [x] Verify `LICENSE` file exists and matches package metadata.
 * [x] Add release notes or `CHANGELOG.md` entry for `v0.1.0`.
 * [x] Verify README installation instructions match actual release workflow.
+* [x] Refresh README presentation with project branding assets.
 * [x] Verify package metadata in `mix.exs` is complete.
 * [x] Verify CI covers the public API surface at a minimum.
 
@@ -188,7 +189,7 @@ Ensure the repository is ready for a public `v0.1.0` release from a packaging an
 
 ### Goal
 
-Expand Flux from a testable runtime into a complete development-grade core. v0.2 should allow a developer to define assets, schedule runs, execute work asynchronously with controlled parallelism, inspect results across restarts, and iterate locally with confidence.
+Expand Favn from a testable runtime into a complete development-grade core. v0.2 should allow a developer to define assets, schedule runs, execute work asynchronously with controlled parallelism, inspect results across restarts, and iterate locally with confidence.
 
 ### Features
 
@@ -229,7 +230,7 @@ Expand the stored and returned run model so developers can inspect execution in 
 * [ ] Add per-step duration fields or derived timing support.
 * [ ] Add step error capture with normalized structure.
 * [ ] Decide whether outputs, output metadata, or output references are persisted.
-* [ ] Update `Flux.Run` to reflect the expanded model.
+* [ ] Update `Favn.Run` to reflect the expanded model.
 * [ ] Add tests for partial and completed run inspection.
 
 #### 3. Asynchronous execution
@@ -242,7 +243,7 @@ Allow runs to execute asynchronously so the caller can start a run and inspect i
 
 **Todo list**
 
-* [ ] Define async runtime semantics for `Flux.run/2` or introduce a dedicated async API if needed.
+* [ ] Define async runtime semantics for `Favn.run/2` or introduce a dedicated async API if needed.
 * [ ] Decide whether sync execution remains the default or becomes an option.
 * [ ] Implement supervised async run processes.
 * [ ] Ensure run state transitions are persisted during async execution.
@@ -347,7 +348,7 @@ Support limited retry behavior suitable for development workflows without introd
 
 **Scope**
 
-Reduce adoption friction by publishing Flux on Hex and tightening package metadata, docs, and release process.
+Reduce adoption friction by publishing Favn on Hex and tightening package metadata, docs, and release process.
 
 **Todo list**
 
@@ -363,7 +364,7 @@ Reduce adoption friction by publishing Flux on Hex and tightening package metada
 
 ### Goal
 
-Make Flux operationally trustworthy in real production environments. v0.3 should focus on correctness under failure, stronger execution and scheduling guarantees, better observability, and operational control.
+Make Favn operationally trustworthy in real production environments. v0.3 should focus on correctness under failure, stronger execution and scheduling guarantees, better observability, and operational control.
 
 ### Features
 
@@ -470,7 +471,7 @@ Add the controls needed by operators to manage live systems safely and predictab
 
 ### Goal
 
-Evolve Flux from a development-grade core into a best-in-class orchestrator for heterogeneous ETL systems. By v1.0, Flux should orchestrate not only native Elixir assets, but also external transformation runtimes in a first-class way, starting with dbt. The core idea is that Flux owns orchestration, scheduling, cross-runtime dependencies, run history, and observability, while external runtimes continue to own their domain-specific execution semantics.
+Evolve Favn from a development-grade core into a best-in-class orchestrator for heterogeneous ETL systems. By v1.0, Favn should orchestrate not only native Elixir assets, but also external transformation runtimes in a first-class way, starting with dbt. The core idea is that Favn owns orchestration, scheduling, cross-runtime dependencies, run history, and observability, while external runtimes continue to own their domain-specific execution semantics.
 
 ### Features
 
@@ -480,12 +481,12 @@ Evolve Flux from a development-grade core into a best-in-class orchestrator for 
 
 **Scope**
 
-Extend the Flux asset model so native Elixir assets and externally discovered assets can coexist in one graph with one orchestration API.
+Extend the Favn asset model so native Elixir assets and externally discovered assets can coexist in one graph with one orchestration API.
 
 **Todo list**
 
 * [ ] Define a runtime abstraction for asset execution backends.
-* [ ] Distinguish native Flux assets from external-runtime assets in the canonical asset model.
+* [ ] Distinguish native Favn assets from external-runtime assets in the canonical asset model.
 * [ ] Define shared metadata fields required across runtimes.
 * [ ] Define runtime-specific metadata extension points.
 * [ ] Ensure graph inspection APIs work consistently across mixed-runtime graphs.
@@ -497,15 +498,15 @@ Extend the Flux asset model so native Elixir assets and externally discovered as
 
 **Scope**
 
-Support dbt as a first-class external runtime by discovering dbt resources from a project and exposing them as Flux assets.
+Support dbt as a first-class external runtime by discovering dbt resources from a project and exposing them as Favn assets.
 
 **Todo list**
 
-* [ ] Design a `flux_dbt` integration boundary or equivalent plugin/runtime package.
+* [ ] Design a `favn_dbt` integration boundary or equivalent plugin/runtime package.
 * [ ] Detect dbt projects in a host application or monorepo layout.
 * [ ] Load dbt project metadata and artifacts needed for discovery.
-* [ ] Discover dbt models, seeds, snapshots, and tests as Flux assets.
-* [ ] Define canonical Flux refs for dbt-backed assets.
+* [ ] Discover dbt models, seeds, snapshots, and tests as Favn assets.
+* [ ] Define canonical Favn refs for dbt-backed assets.
 * [ ] Preserve dbt metadata needed for inspection and operator tooling.
 * [ ] Add tests for discovery against representative dbt projects.
 
@@ -515,15 +516,15 @@ Support dbt as a first-class external runtime by discovering dbt resources from 
 
 **Scope**
 
-Translate dbt’s dependency graph into Flux’s asset graph so dbt resources participate correctly in planning, inspection, and orchestration.
+Translate dbt’s dependency graph into Favn’s asset graph so dbt resources participate correctly in planning, inspection, and orchestration.
 
 **Todo list**
 
-* [ ] Map dbt node dependencies into canonical Flux graph edges.
+* [ ] Map dbt node dependencies into canonical Favn graph edges.
 * [ ] Preserve upstream/downstream lineage from dbt artifacts.
 * [ ] Decide how dbt tests should appear in the graph.
 * [ ] Decide how ephemeral or non-materialized dbt nodes should be represented.
-* [ ] Add tests for graph parity between dbt metadata and Flux graph inspection APIs.
+* [ ] Add tests for graph parity between dbt metadata and Favn graph inspection APIs.
 
 #### 4. External runtime execution bridge for dbt
 
@@ -536,10 +537,10 @@ Execute dbt-backed assets through a supervised external runtime boundary rather 
 **Todo list**
 
 * [ ] Decide whether the execution bridge should be a sidecar, supervised OS process, or both.
-* [ ] Define the contract between Flux and the dbt runtime boundary.
+* [ ] Define the contract between Favn and the dbt runtime boundary.
 * [ ] Implement selection and invocation of dbt-backed assets through the bridge.
 * [ ] Capture stdout, stderr, exit status, timings, and emitted artifacts.
-* [ ] Normalize dbt execution results into Flux run-step records.
+* [ ] Normalize dbt execution results into Favn run-step records.
 * [ ] Add tests for successful, failed, and interrupted dbt execution.
 
 #### 5. Monorepo project layout support
@@ -548,7 +549,7 @@ Execute dbt-backed assets through a supervised external runtime boundary rather 
 
 **Scope**
 
-Support host applications that keep Elixir code and dbt code in the same repository while allowing Flux to discover both cleanly.
+Support host applications that keep Elixir code and dbt code in the same repository while allowing Favn to discover both cleanly.
 
 **Todo list**
 
@@ -575,21 +576,21 @@ Allow native Elixir assets and dbt-backed assets to participate in the same orch
 * [ ] Add tests for mixed-runtime execution plans.
 * [ ] Add tests for mixed-runtime failure semantics.
 
-#### 7. Flux as scheduler and orchestrator of record
+#### 7. Favn as scheduler and orchestrator of record
 
 **Status:** planned
 
 **Scope**
 
-Keep scheduling and orchestration responsibility inside Flux, even when execution is delegated to external runtimes.
+Keep scheduling and orchestration responsibility inside Favn, even when execution is delegated to external runtimes.
 
 **Todo list**
 
 * [ ] Define scheduler behavior for externally backed assets.
-* [ ] Ensure external runtime runs are initiated through Flux scheduling and runtime APIs.
-* [ ] Prevent split-brain orchestration between Flux and external runtimes.
-* [ ] Ensure run history, retries, cancellation, and operator visibility stay centralized in Flux.
-* [ ] Add tests that verify Flux remains the source of truth for orchestration state.
+* [ ] Ensure external runtime runs are initiated through Favn scheduling and runtime APIs.
+* [ ] Prevent split-brain orchestration between Favn and external runtimes.
+* [ ] Ensure run history, retries, cancellation, and operator visibility stay centralized in Favn.
+* [ ] Add tests that verify Favn remains the source of truth for orchestration state.
 
 #### 8. External runtime observability ingestion
 
@@ -597,12 +598,12 @@ Keep scheduling and orchestration responsibility inside Flux, even when executio
 
 **Scope**
 
-Ingest runtime details from dbt execution into Flux so operator tooling can inspect heterogeneous runs through one surface.
+Ingest runtime details from dbt execution into Favn so operator tooling can inspect heterogeneous runs through one surface.
 
 **Todo list**
 
 * [ ] Define which dbt artifacts and execution metadata should be ingested.
-* [ ] Map external runtime metadata into Flux event and run-step models.
+* [ ] Map external runtime metadata into Favn event and run-step models.
 * [ ] Preserve raw external execution details where useful for debugging.
 * [ ] Add tests for ingestion of representative execution results.
 * [ ] Document observability limits and guarantees across runtimes.
@@ -613,7 +614,7 @@ Ingest runtime details from dbt execution into Flux so operator tooling can insp
 
 **Scope**
 
-Design the integration architecture so dbt is the first external runtime, not the last. This should allow later support for other transformation systems such as SQLMesh without redesigning Flux around a single integration.
+Design the integration architecture so dbt is the first external runtime, not the last. This should allow later support for other transformation systems such as SQLMesh without redesigning Favn around a single integration.
 
 **Todo list**
 
@@ -629,13 +630,13 @@ Design the integration architecture so dbt is the first external runtime, not th
 
 **Scope**
 
-Evaluate SQLMesh as a potential future runtime so the v1 architecture does not unnecessarily lock Flux into dbt-only assumptions.
+Evaluate SQLMesh as a potential future runtime so the v1 architecture does not unnecessarily lock Favn into dbt-only assumptions.
 
 **Todo list**
 
 * [ ] Compare dbt and SQLMesh integration requirements.
 * [ ] Identify which runtime abstraction points are shared.
-* [ ] Identify dbt-specific assumptions that should be avoided in core Flux APIs.
+* [ ] Identify dbt-specific assumptions that should be avoided in core Favn APIs.
 * [ ] Capture findings in an architecture note.
 
 ---
@@ -644,6 +645,6 @@ Evaluate SQLMesh as a potential future runtime so the v1 architecture does not u
 
 The following item is intentionally not included here because it should live separately:
 
-* a standalone example repository such as `flux-demo` for a fully workable cloneable app
+* a standalone example repository such as `favn-demo` for a fully workable cloneable app
 
 That repository can support adoption and documentation, but it should not be treated as a core library roadmap item.

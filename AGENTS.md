@@ -2,17 +2,17 @@
 
 ## Project overview
 
-Flux is an Elixir library for defining and orchestrating business-oriented data assets.
-This repository currently focuses on the **core Flux library**.
-The main api interface for library is found in `/lib/flux.ex`. This file contains extensive documentation and main interface functions and documentation should be continuously updated as we progress. 
+Favn is an Elixir library for defining and orchestrating business-oriented data assets.
+This repository currently focuses on the **core Favn library**.
+The main api interface for library is found in `/lib/favn.ex`. This file contains extensive documentation and main interface functions and documentation should be continuously updated as we progress. 
 The most important file is `FEATURES.md`. We will use this file to document our progress and roadmap.
 
 **Important rules**
 - Flix is cuttentluyi private development and has no users. Breaking changes is allowed and no need for handling legacy scenarios.
-- Always start by reading `/lib/flux.ex` and `readme.md` to get overview of project, code interface and progress
+- Always start by reading `/lib/favn.ex` and `readme.md` to get overview of project, code interface and progress
 - Keep status of roadmap features and task list always up to date in `FEATURES.md`. 
 - When you start coding, make sure task exist, and when you have created the code always mark task as done.
-- Always keep user documentation up to date in `/lib/flux.ex` and `README.md`.
+- Always keep user documentation up to date in `/lib/favn.ex` and `README.md`.
 - We are using git dependencies and not hex. Therefore following commands must be run before compile and testing:
     - mix archive.install github hexpm/hex branch latest --force
     - mix deps.get
@@ -67,4 +67,4 @@ When tradeoffs appear, prefer:
 4. Composability
 5. Convenience
 
-Choose the simpler design unless the more advanced design clearly solves a real problem already present in Flux.
+Choose the simpler design unless the more advanced design clearly solves a real problem already present in Favn.

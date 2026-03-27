@@ -1,20 +1,20 @@
-defmodule Flux.PlannerTest do
+defmodule Favn.PlannerTest do
   use ExUnit.Case
 
-  alias Flux.Test.Fixtures.Assets.Graph.BronzeAssets
-  alias Flux.Test.Fixtures.Assets.Graph.GoldAssets
-  alias Flux.Test.Fixtures.Assets.Graph.SilverAssets
+  alias Favn.Test.Fixtures.Assets.Graph.BronzeAssets
+  alias Favn.Test.Fixtures.Assets.Graph.GoldAssets
+  alias Favn.Test.Fixtures.Assets.Graph.SilverAssets
 
   setup do
-    state = Flux.TestSetup.capture_state()
+    state = Favn.TestSetup.capture_state()
 
     :ok =
-      Flux.TestSetup.setup_asset_modules([BronzeAssets, SilverAssets, GoldAssets],
+      Favn.TestSetup.setup_asset_modules([BronzeAssets, SilverAssets, GoldAssets],
         reload_graph?: true
       )
 
     on_exit(fn ->
-      Flux.TestSetup.restore_state(state, reload_graph?: true)
+      Favn.TestSetup.restore_state(state, reload_graph?: true)
     end)
 
     :ok
@@ -22,7 +22,7 @@ defmodule Flux.PlannerTest do
 
   test "builds multi-target plans with shared dependency dedup and stage grouping" do
     assert {:ok, plan} =
-             Flux.plan_run([
+             Favn.plan_run([
                {GoldAssets, :gold_sales},
                {GoldAssets, :gold_finance}
              ])
@@ -50,7 +50,7 @@ defmodule Flux.PlannerTest do
   end
 
   test "supports dependencies: :none for target-only planning" do
-    assert {:ok, plan} = Flux.plan_run({GoldAssets, :gold_sales}, dependencies: :none)
+    assert {:ok, plan} = Favn.plan_run({GoldAssets, :gold_sales}, dependencies: :none)
 
     assert plan.topo_order == [{GoldAssets, :gold_sales}]
     assert plan.stages == [[{GoldAssets, :gold_sales}]]
@@ -58,17 +58,17 @@ defmodule Flux.PlannerTest do
   end
 
   test "returns errors for invalid planner input" do
-    assert {:error, :empty_targets} = Flux.plan_run([])
+    assert {:error, :empty_targets} = Favn.plan_run([])
 
     assert {:error, {:invalid_dependencies_mode, :invalid}} =
-             Flux.plan_run({GoldAssets, :gold_sales}, dependencies: :invalid)
+             Favn.plan_run({GoldAssets, :gold_sales}, dependencies: :invalid)
 
-    assert {:error, :asset_not_found} = Flux.plan_run({GoldAssets, :missing})
+    assert {:error, :asset_not_found} = Favn.plan_run({GoldAssets, :missing})
   end
 
   test "normalizes duplicate targets into deterministic sorted order" do
     assert {:ok, plan} =
-             Flux.plan_run([
+             Favn.plan_run([
                {GoldAssets, :gold_sales},
                {GoldAssets, :gold_finance},
                {GoldAssets, :gold_sales}

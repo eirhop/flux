@@ -1,34 +1,34 @@
-defmodule Flux.Assets do
+defmodule Favn.Assets do
   @moduledoc """
-  Compile-time DSL for authoring Flux assets inside a module.
+  Compile-time DSL for authoring Favn assets inside a module.
 
-  `use Flux.Assets` lets a module mark public functions with `@asset` so Flux
-  can capture canonical `%Flux.Asset{}` metadata for later introspection.
+  `use Favn.Assets` lets a module mark public functions with `@asset` so Favn
+  can capture canonical `%Favn.Asset{}` metadata for later introspection.
 
   This module is intentionally focused on compile-time authoring behavior:
 
     * collecting metadata from `@asset`
     * enforcing authoring rules
     * normalizing DSL-friendly dependency declarations
-    * emitting `__flux_assets__/0` for later runtime inspection
+    * emitting `__favn_assets__/0` for later runtime inspection
 
   Asset authoring contract:
 
     * asset functions must have arity 2 and use `def asset(ctx, deps)`
-    * assets should return `{:ok, %Flux.Asset.Output{}}` or `{:error, reason}`
+    * assets should return `{:ok, %Favn.Asset.Output{}}` or `{:error, reason}`
   """
 
-  alias Flux.Asset
-  alias Flux.Ref
+  alias Favn.Asset
+  alias Favn.Ref
 
   @doc false
   defmacro __using__(_opts) do
     quote do
       Module.register_attribute(__MODULE__, :asset, persist: false)
-      Module.register_attribute(__MODULE__, :flux_assets_raw, accumulate: true)
+      Module.register_attribute(__MODULE__, :favn_assets_raw, accumulate: true)
 
-      @on_definition Flux.Assets
-      @before_compile Flux.Assets
+      @on_definition Favn.Assets
+      @before_compile Favn.Assets
     end
   end
 
@@ -46,7 +46,7 @@ defmodule Flux.Assets do
             arity = length(args || [])
 
             if arity == 2 do
-              Module.put_attribute(env.module, :flux_assets_raw, %{
+              Module.put_attribute(env.module, :favn_assets_raw, %{
                 module: env.module,
                 name: name,
                 arity: arity,
@@ -85,19 +85,19 @@ defmodule Flux.Assets do
 
     assets =
       env.module
-      |> Module.get_attribute(:flux_assets_raw)
+      |> Module.get_attribute(:favn_assets_raw)
       |> Enum.reverse()
       |> validate_unique_names!()
       |> Enum.map(&build_asset!/1)
 
     quote do
       @doc false
-      @spec __flux_asset_module__() :: true
-      def __flux_asset_module__, do: true
+      @spec __favn_asset_module__() :: true
+      def __favn_asset_module__, do: true
 
       @doc false
-      @spec __flux_assets__() :: [Flux.Asset.t()]
-      def __flux_assets__, do: unquote(Macro.escape(assets))
+      @spec __favn_assets__() :: [Favn.Asset.t()]
+      def __favn_assets__, do: unquote(Macro.escape(assets))
     end
   end
 

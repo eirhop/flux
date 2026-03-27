@@ -1,10 +1,10 @@
-defmodule Flux.Asset.Output do
+defmodule Favn.Asset.Output do
   @moduledoc """
-  Canonical success envelope returned by Flux assets.
+  Canonical success envelope returned by Favn assets.
 
   Assets should return one of:
 
-    * `{:ok, %Flux.Asset.Output{}}`
+    * `{:ok, %Favn.Asset.Output{}}`
     * `{:error, reason}`
   """
 

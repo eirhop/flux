@@ -1,9 +1,9 @@
-defmodule Flux.Registry do
+defmodule Favn.Registry do
   @moduledoc """
-  Global asset discovery and lookup for configured Flux asset modules.
+  Global asset discovery and lookup for configured Favn asset modules.
 
   The registry keeps global discovery explicit by reading the configured
-  `:asset_modules` scope for the `:flux` application rather than scanning all
+  `:asset_modules` scope for the `:favn` application rather than scanning all
   loaded modules in the VM.
 
   Registry data is loaded during application startup and cached in
@@ -12,8 +12,8 @@ defmodule Flux.Registry do
   when the compiled asset module configuration changes.
   """
 
-  alias Flux.Asset
-  alias Flux.Ref
+  alias Favn.Asset
+  alias Favn.Ref
 
   @catalog_key {__MODULE__, :catalog}
 
@@ -22,7 +22,7 @@ defmodule Flux.Registry do
   """
   @type error ::
           {:invalid_asset_module, module()}
-          | {:duplicate_asset, Flux.asset_ref()}
+          | {:duplicate_asset, Favn.asset_ref()}
 
   @doc """
   List all globally configured assets.
@@ -67,7 +67,7 @@ defmodule Flux.Registry do
   """
   @spec configured_modules() :: [module()]
   def configured_modules do
-    :flux
+    :favn
     |> Application.get_env(:asset_modules, [])
     |> Enum.uniq()
   end
@@ -90,8 +90,8 @@ defmodule Flux.Registry do
   def build_catalog(modules) when is_list(modules) do
     modules
     |> Enum.reduce_while({:ok, %{assets: [], assets_by_ref: %{}}}, fn module, {:ok, catalog} ->
-      if Flux.asset_module?(module) do
-        case merge_assets(catalog, module.__flux_assets__()) do
+      if Favn.asset_module?(module) do
+        case merge_assets(catalog, module.__favn_assets__()) do
           {:ok, updated_catalog} -> {:cont, {:ok, updated_catalog}}
           {:error, _reason} = error -> {:halt, error}
         end

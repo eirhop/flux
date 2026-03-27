@@ -1,48 +1,48 @@
-defmodule FluxTest do
+defmodule FavnTest do
   use ExUnit.Case
 
-  doctest Flux
+  doctest Favn
 
   defmodule SampleAssets do
-    use Flux.Assets
+    use Favn.Assets
 
     @doc "Extract raw orders"
     @asset true
-    def extract_orders(_ctx, _deps), do: {:ok, %Flux.Asset.Output{output: [%{id: 1}]}}
+    def extract_orders(_ctx, _deps), do: {:ok, %Favn.Asset.Output{output: [%{id: 1}]}}
 
     @doc "Normalize extracted orders"
     @asset depends_on: [:extract_orders], tags: [:sales]
     def normalize_orders(_ctx, deps),
-      do: {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {__MODULE__, :extract_orders})}}
+      do: {:ok, %Favn.Asset.Output{output: Map.fetch!(deps, {__MODULE__, :extract_orders})}}
   end
 
   defmodule CrossModuleAssets do
-    use Flux.Assets
+    use Favn.Assets
 
-    alias FluxTest.SampleAssets
+    alias FavnTest.SampleAssets
 
     @doc "Publish normalized orders"
     @asset depends_on: [{SampleAssets, :normalize_orders}], tags: [:reporting]
     def publish_orders(_ctx, deps),
-      do: {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {SampleAssets, :normalize_orders})}}
+      do: {:ok, %Favn.Asset.Output{output: Map.fetch!(deps, {SampleAssets, :normalize_orders})}}
   end
 
   defmodule SpoofedAssets do
-    def __flux_assets__, do: :oops
+    def __favn_assets__, do: :oops
   end
 
   defmodule AdditionalAssets do
-    use Flux.Assets
+    use Favn.Assets
 
     @doc "Archive published orders"
     @asset depends_on: [{CrossModuleAssets, :publish_orders}]
     def archive_orders(_ctx, deps),
       do:
-        {:ok, %Flux.Asset.Output{output: Map.fetch!(deps, {CrossModuleAssets, :publish_orders})}}
+        {:ok, %Favn.Asset.Output{output: Map.fetch!(deps, {CrossModuleAssets, :publish_orders})}}
   end
 
   defmodule FacadeRawErrorStore do
-    @behaviour Flux.Storage.Adapter
+    @behaviour Favn.Storage.Adapter
 
     @impl true
     def child_spec(_opts), do: :none
@@ -59,25 +59,25 @@ defmodule FluxTest do
 
   require Logger
 
-  alias Flux.Test.Fixtures.Assets.Basic.AdditionalAssets
-  alias Flux.Test.Fixtures.Assets.Basic.CrossModuleAssets
-  alias Flux.Test.Fixtures.Assets.Basic.SampleAssets
-  alias Flux.Test.Fixtures.Assets.Basic.SpoofedAssets
+  alias Favn.Test.Fixtures.Assets.Basic.AdditionalAssets
+  alias Favn.Test.Fixtures.Assets.Basic.CrossModuleAssets
+  alias Favn.Test.Fixtures.Assets.Basic.SampleAssets
+  alias Favn.Test.Fixtures.Assets.Basic.SpoofedAssets
 
   setup do
-    state = Flux.TestSetup.capture_state()
+    state = Favn.TestSetup.capture_state()
 
     on_exit(fn ->
-      Flux.TestSetup.restore_state(state)
+      Favn.TestSetup.restore_state(state)
     end)
 
     :ok
   end
 
   test "lists globally configured assets through the registry-backed facade" do
-    :ok = Flux.TestSetup.setup_asset_modules([SampleAssets, CrossModuleAssets])
+    :ok = Favn.TestSetup.setup_asset_modules([SampleAssets, CrossModuleAssets])
 
-    assert {:ok, assets} = Flux.list_assets()
+    assert {:ok, assets} = Favn.list_assets()
 
     assert Enum.map(assets, & &1.ref) == [
              {CrossModuleAssets, :publish_orders},
@@ -87,9 +87,9 @@ defmodule FluxTest do
   end
 
   test "list_assets/0 sorts globally discovered assets by canonical ref" do
-    :ok = Flux.TestSetup.setup_asset_modules([SampleAssets, AdditionalAssets, CrossModuleAssets])
+    :ok = Favn.TestSetup.setup_asset_modules([SampleAssets, AdditionalAssets, CrossModuleAssets])
 
-    assert {:ok, assets} = Flux.list_assets()
+    assert {:ok, assets} = Favn.list_assets()
 
     assert Enum.map(assets, & &1.ref) == [
              {AdditionalAssets, :archive_orders},
@@ -101,7 +101,7 @@ defmodule FluxTest do
 
   test "build_catalog preserves deterministic asset order across module merges" do
     assert {:ok, catalog} =
-             Flux.Registry.build_catalog([SampleAssets, CrossModuleAssets, AdditionalAssets])
+             Favn.Registry.build_catalog([SampleAssets, CrossModuleAssets, AdditionalAssets])
 
     assert Enum.map(catalog.assets, & &1.ref) == [
              {SampleAssets, :extract_orders},
@@ -110,9 +110,9 @@ defmodule FluxTest do
              {AdditionalAssets, :archive_orders}
            ]
 
-    :ok = Flux.TestSetup.setup_asset_modules([SampleAssets, CrossModuleAssets, AdditionalAssets])
+    :ok = Favn.TestSetup.setup_asset_modules([SampleAssets, CrossModuleAssets, AdditionalAssets])
 
-    assert {:ok, listed_assets} = Flux.list_assets()
+    assert {:ok, listed_assets} = Favn.list_assets()
 
     assert Enum.map(listed_assets, & &1.ref) == [
              {AdditionalAssets, :archive_orders},
@@ -123,29 +123,29 @@ defmodule FluxTest do
   end
 
   test "lists assets for a module through the public facade" do
-    assert {:ok, assets} = Flux.list_assets(SampleAssets)
+    assert {:ok, assets} = Favn.list_assets(SampleAssets)
 
     assert Enum.map(assets, & &1.name) == [:extract_orders, :normalize_orders]
   end
 
   test "fetches an asset through the public facade" do
-    :ok = Flux.TestSetup.setup_asset_modules([SampleAssets, CrossModuleAssets])
+    :ok = Favn.TestSetup.setup_asset_modules([SampleAssets, CrossModuleAssets])
 
-    assert {:ok, asset} = Flux.get_asset({SampleAssets, :normalize_orders})
-    assert {:ok, cross_module_asset} = Flux.get_asset({CrossModuleAssets, :publish_orders})
+    assert {:ok, asset} = Favn.get_asset({SampleAssets, :normalize_orders})
+    assert {:ok, cross_module_asset} = Favn.get_asset({CrossModuleAssets, :publish_orders})
 
     assert asset.depends_on == [{SampleAssets, :extract_orders}]
     assert cross_module_asset.depends_on == [{SampleAssets, :normalize_orders}]
 
-    assert {:error, :asset_not_found} = Flux.get_asset({SampleAssets, :missing})
-    assert {:error, :not_asset_module} = Flux.get_asset({Enum, :map})
+    assert {:error, :asset_not_found} = Favn.get_asset({SampleAssets, :missing})
+    assert {:error, :not_asset_module} = Favn.get_asset({Enum, :map})
   end
 
   test "inspects dependency queries through the public facade" do
     :ok =
-      Flux.TestSetup.setup_asset_modules([SampleAssets, CrossModuleAssets], reload_graph?: true)
+      Favn.TestSetup.setup_asset_modules([SampleAssets, CrossModuleAssets], reload_graph?: true)
 
-    assert {:ok, upstream_assets} = Flux.upstream_assets({CrossModuleAssets, :publish_orders})
+    assert {:ok, upstream_assets} = Favn.upstream_assets({CrossModuleAssets, :publish_orders})
 
     assert Enum.map(upstream_assets, & &1.ref) == [
              {SampleAssets, :extract_orders},
@@ -153,12 +153,12 @@ defmodule FluxTest do
            ]
 
     assert {:ok, downstream_assets} =
-             Flux.downstream_assets({SampleAssets, :extract_orders}, transitive: false)
+             Favn.downstream_assets({SampleAssets, :extract_orders}, transitive: false)
 
     assert Enum.map(downstream_assets, & &1.ref) == [{SampleAssets, :normalize_orders}]
 
     assert {:ok, dependency_graph} =
-             Flux.dependency_graph({CrossModuleAssets, :publish_orders}, tags: [:sales])
+             Favn.dependency_graph({CrossModuleAssets, :publish_orders}, tags: [:sales])
 
     assert Map.keys(dependency_graph.assets_by_ref) |> Enum.sort() == [
              {CrossModuleAssets, :publish_orders},
@@ -166,46 +166,46 @@ defmodule FluxTest do
            ]
   end
 
-  test "reports whether a module exposes Flux asset metadata" do
-    assert Flux.asset_module?(SampleAssets)
-    refute Flux.asset_module?(Enum)
-    refute Flux.asset_module?(SpoofedAssets)
+  test "reports whether a module exposes Favn asset metadata" do
+    assert Favn.asset_module?(SampleAssets)
+    refute Favn.asset_module?(Enum)
+    refute Favn.asset_module?(SpoofedAssets)
   end
 
-  test "rejects modules that only spoof __flux_assets__/0" do
-    assert {:error, :not_asset_module} = Flux.list_assets(SpoofedAssets)
-    Application.put_env(:flux, :asset_modules, [SpoofedAssets])
+  test "rejects modules that only spoof __favn_assets__/0" do
+    assert {:error, :not_asset_module} = Favn.list_assets(SpoofedAssets)
+    Application.put_env(:favn, :asset_modules, [SpoofedAssets])
 
-    assert {:error, {:invalid_asset_module, SpoofedAssets}} = Flux.Registry.reload()
-    assert {:error, :not_asset_module} = Flux.get_asset({SpoofedAssets, :normalize_orders})
+    assert {:error, {:invalid_asset_module, SpoofedAssets}} = Favn.Registry.reload()
+    assert {:error, :not_asset_module} = Favn.get_asset({SpoofedAssets, :normalize_orders})
   end
 
   test "reports invalid globally configured modules" do
-    Application.put_env(:flux, :asset_modules, [SampleAssets, Enum])
+    Application.put_env(:favn, :asset_modules, [SampleAssets, Enum])
 
-    assert {:error, {:invalid_asset_module, Enum}} = Flux.Registry.reload()
+    assert {:error, {:invalid_asset_module, Enum}} = Favn.Registry.reload()
   end
 
   test "reads from the startup-loaded cache until the registry is reloaded" do
-    :ok = Flux.TestSetup.setup_asset_modules([SampleAssets])
-    assert {:ok, assets} = Flux.list_assets()
+    :ok = Favn.TestSetup.setup_asset_modules([SampleAssets])
+    assert {:ok, assets} = Favn.list_assets()
 
     assert Enum.map(assets, & &1.ref) == [
              {SampleAssets, :extract_orders},
              {SampleAssets, :normalize_orders}
            ]
 
-    Application.put_env(:flux, :asset_modules, [SampleAssets, CrossModuleAssets])
+    Application.put_env(:favn, :asset_modules, [SampleAssets, CrossModuleAssets])
 
-    assert {:ok, cached_assets} = Flux.list_assets()
+    assert {:ok, cached_assets} = Favn.list_assets()
 
     assert Enum.map(cached_assets, & &1.ref) == [
              {SampleAssets, :extract_orders},
              {SampleAssets, :normalize_orders}
            ]
 
-    assert :ok = Flux.Registry.reload()
-    assert {:ok, reloaded_assets} = Flux.list_assets()
+    assert :ok = Favn.Registry.reload()
+    assert {:ok, reloaded_assets} = Favn.list_assets()
 
     assert Enum.map(reloaded_assets, & &1.ref) == [
              {CrossModuleAssets, :publish_orders},
@@ -215,10 +215,10 @@ defmodule FluxTest do
   end
 
   test "public run facade returns canonical storage error contract" do
-    Application.put_env(:flux, :storage_adapter, FacadeRawErrorStore)
+    Application.put_env(:favn, :storage_adapter, FacadeRawErrorStore)
 
-    assert {:error, {:store_error, :read_failed}} = Flux.get_run("run-1")
-    assert {:error, {:store_error, :list_failed}} = Flux.list_runs()
-    assert {:error, :invalid_opts} = Flux.list_runs(status: :pending)
+    assert {:error, {:store_error, :read_failed}} = Favn.get_run("run-1")
+    assert {:error, {:store_error, :list_failed}} = Favn.list_runs()
+    assert {:error, :invalid_opts} = Favn.list_runs(status: :pending)
   end
 end

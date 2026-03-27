@@ -1,4 +1,4 @@
-defmodule Flux.Planner do
+defmodule Favn.Planner do
   @moduledoc """
   Build deterministic execution plans from the global graph index.
 
@@ -12,9 +12,9 @@ defmodule Flux.Planner do
     * stage number equals topological depth (`0` for source assets)
   """
 
-  alias Flux.GraphIndex
-  alias Flux.Plan
-  alias Flux.Ref
+  alias Favn.GraphIndex
+  alias Favn.Plan
+  alias Favn.Ref
 
   @typedoc """
   Planner options.
@@ -22,7 +22,7 @@ defmodule Flux.Planner do
     * `:dependencies` - `:all` includes transitive upstream dependencies;
       `:none` includes target refs only.
   """
-  @type plan_opts :: [dependencies: Flux.dependencies_mode()]
+  @type plan_opts :: [dependencies: Favn.dependencies_mode()]
 
   @spec plan(Ref.t() | [Ref.t()], plan_opts()) :: {:ok, Plan.t()} | {:error, term()}
   def plan(targets, opts \\ []) when is_list(opts) do

@@ -1,6 +1,6 @@
-defmodule Flux.Application do
+defmodule Favn.Application do
   @moduledoc """
-  OTP application entrypoint for Flux.
+  OTP application entrypoint for Favn.
 
   Startup order is intentional:
 
@@ -9,7 +9,7 @@ defmodule Flux.Application do
     3. validate the configured storage adapter
     4. start PubSub and any storage adapter child processes
 
-  If any of the preflight steps fail, startup returns that error and Flux does
+  If any of the preflight steps fail, startup returns that error and Favn does
   not boot in a partially initialized state.
   """
 
@@ -17,19 +17,19 @@ defmodule Flux.Application do
 
   @impl true
   def start(_type, _args) do
-    adapter = Flux.Storage.adapter_module()
-    pubsub_name = Application.get_env(:flux, :pubsub_name, Flux.PubSub)
-    # Flux starts its own PubSub by default so it works standalone; a future
+    adapter = Favn.Storage.adapter_module()
+    pubsub_name = Application.get_env(:favn, :pubsub_name, Favn.PubSub)
+    # Favn starts its own PubSub by default so it works standalone; a future
     # host-managed mode can reuse the same configurable pubsub_name boundary.
     pubsub_child = {Phoenix.PubSub, name: pubsub_name}
 
-    with :ok <- Flux.Registry.load(),
-         :ok <- Flux.GraphIndex.load(),
-         :ok <- Flux.Storage.validate_adapter(adapter),
-         {:ok, child_specs} <- Flux.Storage.child_specs() do
+    with :ok <- Favn.Registry.load(),
+         :ok <- Favn.GraphIndex.load(),
+         :ok <- Favn.Storage.validate_adapter(adapter),
+         {:ok, child_specs} <- Favn.Storage.child_specs() do
       Supervisor.start_link([pubsub_child | child_specs],
         strategy: :one_for_one,
-        name: Flux.Supervisor
+        name: Favn.Supervisor
       )
     end
   end

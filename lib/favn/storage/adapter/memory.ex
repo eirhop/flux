@@ -1,4 +1,4 @@
-defmodule Flux.Storage.Adapter.Memory do
+defmodule Favn.Storage.Adapter.Memory do
   @moduledoc """
   In-memory storage adapter for runtime run records.
 
@@ -11,7 +11,7 @@ defmodule Flux.Storage.Adapter.Memory do
 
   use GenServer
 
-  alias Flux.Run
+  alias Favn.Run
 
   @table_name __MODULE__.Table
 
@@ -52,7 +52,7 @@ defmodule Flux.Storage.Adapter.Memory do
     error -> {:error, error}
   end
 
-  @spec get_run(Flux.run_id(), keyword()) :: {:ok, Run.t()} | {:error, :not_found | term()}
+  @spec get_run(Favn.run_id(), keyword()) :: {:ok, Run.t()} | {:error, :not_found | term()}
   def get_run(run_id, _opts) do
     case :ets.lookup(@table_name, run_id) do
       [{^run_id, run, _inserted_seq}] -> {:ok, run}
@@ -62,7 +62,7 @@ defmodule Flux.Storage.Adapter.Memory do
     error -> {:error, error}
   end
 
-  @spec list_runs(Flux.list_runs_opts(), keyword()) :: {:ok, [Run.t()]} | {:error, term()}
+  @spec list_runs(Favn.list_runs_opts(), keyword()) :: {:ok, [Run.t()]} | {:error, term()}
   def list_runs(opts, _adapter_opts) when is_list(opts) do
     status = Keyword.get(opts, :status)
     limit = Keyword.get(opts, :limit)
