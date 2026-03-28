@@ -85,10 +85,12 @@ defmodule Favn.Test.Fixtures.Assets.Runner.TerminalFailingStore do
     count = :persistent_term.get(@counter_key, 0)
     :persistent_term.put(@counter_key, count + 1)
 
-    if count == 0 do
-      :ok
-    else
+    # Deterministic failure on the terminal checkpoint for the standard
+    # successful `:final` run flow after startup + per-step checkpoints.
+    if count == 7 do
       {:error, :terminal_write_failed}
+    else
+      :ok
     end
   end
 

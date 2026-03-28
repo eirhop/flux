@@ -75,7 +75,6 @@ defmodule Favn.Runtime.Coordinator do
   @spec start_and_execute(State.t()) :: run_result()
   defp start_and_execute(state) do
     with {:ok, state} <- apply_run_transition(state, :start),
-         {:ok, state} <- persist_snapshot(state),
          {:ok, state} <- emit_step_ready_for_sources(state),
          {:ok, state} <- execute_until_terminal(state) do
       public_run = Projector.to_public_run(state)
