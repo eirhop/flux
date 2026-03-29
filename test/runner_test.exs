@@ -255,6 +255,106 @@ defmodule Favn.RunnerTest do
     assert {:error, :invalid_opts} = Favn.list_runs(status: :pending)
   end
 
+  test "executes independent ready steps in parallel with bounded concurrency" do
+    counter = :atomics.new(2, signed: false)
+
+    assert {:ok, run_id} =
+             Favn.run({RunnerAssets, :parallel_join},
+               max_concurrency: 2,
+               params: %{counter: counter}
+             )
+
+    assert {:ok, run} = Favn.await_run(run_id)
+
+    assert run.status == :ok
+    assert run.outputs[{RunnerAssets, :parallel_join}] == [:parallel_a, :parallel_b, :parallel_c]
+    assert :atomics.get(counter, 2) <= 2
+
+    join_started = run.asset_results[{RunnerAssets, :parallel_join}].started_at
+
+    latest_upstream_finish =
+      [:parallel_a, :parallel_b, :parallel_c]
+      |> Enum.map(fn name -> run.asset_results[{RunnerAssets, name}].finished_at end)
+      |> Enum.max(DateTime)
+
+    assert DateTime.compare(join_started, latest_upstream_finish) in [:eq, :gt]
+  end
+
+  test "admits ready steps deterministically while allowing non-deterministic completion" do
+    parent = self()
+
+    assert {:ok, run_id} =
+             Favn.run({RunnerAssets, :parallel_join},
+               max_concurrency: 2,
+               params: %{notify_pid: parent}
+             )
+
+    :ok = Favn.subscribe_run(run_id)
+    assert {:ok, _run} = Favn.await_run(run_id)
+
+    events =
+      Stream.repeatedly(fn ->
+        receive do
+          {:favn_run_event, event} -> event
+        after
+          250 -> :done
+        end
+      end)
+      |> Enum.take_while(&(&1 != :done))
+
+    started_order =
+      events
+      |> Enum.filter(&(&1.event == :step_started))
+      |> Enum.map(& &1.ref)
+      |> Enum.filter(fn {mod, name} ->
+        mod == RunnerAssets and name in [:parallel_a, :parallel_b, :parallel_c]
+      end)
+
+    assert started_order == [
+             {RunnerAssets, :parallel_a},
+             {RunnerAssets, :parallel_b},
+             {RunnerAssets, :parallel_c}
+           ]
+  end
+
+  test "first failure closes admission and unresolved work is skipped after inflight drains" do
+    counter = :atomics.new(2, signed: false)
+
+    assert {:ok, run_id} =
+             Favn.run({RunnerAssets, :parallel_terminal},
+               max_concurrency: 2,
+               params: %{counter: counter}
+             )
+
+    assert {:error, run} = Favn.await_run(run_id)
+
+    assert run.status == :error
+
+    assert run.error == %{
+             ref: {RunnerAssets, :parallel_fail},
+             stage: 1,
+             reason: :parallel_failure
+           }
+
+    case Map.get(run.asset_results, {RunnerAssets, :parallel_slow}) do
+      nil -> :ok
+      result -> assert result.status == :ok
+    end
+
+    refute Map.has_key?(run.asset_results, {RunnerAssets, :parallel_after_slow})
+    refute Map.has_key?(run.asset_results, {RunnerAssets, :parallel_terminal})
+    assert :atomics.get(counter, 2) <= 2
+  end
+
+  test "normalizes hard executor crashes into failed step results" do
+    assert {:ok, run_id} = Favn.run({RunnerAssets, :hard_crash}, max_concurrency: 1)
+    assert {:error, run} = Favn.await_run(run_id)
+
+    assert run.status == :error
+    assert run.error == %{ref: {RunnerAssets, :hard_crash}, stage: 1, reason: :killed}
+    assert run.asset_results[{RunnerAssets, :hard_crash}].error.kind == :exit
+  end
+
   test "run/2 returns immediately with a run id while execution continues" do
     assert {:ok, run_id} = Favn.run({RunnerAssets, :slow_asset})
     assert is_binary(run_id)
