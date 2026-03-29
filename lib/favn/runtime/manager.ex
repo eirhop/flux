@@ -32,13 +32,18 @@ defmodule Favn.Runtime.Manager do
     with :ok <- validate_params(params),
          {:ok, plan} <- Favn.plan_run(target_ref, dependencies: dependencies),
          runtime_state <- build_runtime_state(plan, params),
+         {:ok, pid} <- start_run_coordinator(runtime_state),
          :ok <- persist_initial_snapshot(runtime_state),
          :ok <- emit_run_created(runtime_state),
-         {:ok, pid} <- start_run_coordinator(runtime_state) do
+         :ok <- kickoff_run(pid) do
       ref = Process.monitor(pid)
       next_state = put_in(state, [:run_monitors, ref], runtime_state.run_id)
       {:reply, {:ok, runtime_state.run_id}, next_state}
     else
+      {:start_failed_after_spawn, pid, reason} ->
+        _ = DynamicSupervisor.terminate_child(Favn.Runtime.RunSupervisor, pid)
+        {:reply, {:error, reason}, state}
+
       {:error, reason} ->
         {:reply, {:error, reason}, state}
     end
@@ -94,6 +99,14 @@ defmodule Favn.Runtime.Manager do
     :ok
   end
 
+  defp kickoff_run(pid) when is_pid(pid) do
+    GenServer.cast(pid, :start_run)
+    :ok
+  rescue
+    error ->
+      {:start_failed_after_spawn, pid, error}
+  end
+
   defp start_run_coordinator(%State{} = runtime_state) do
     child_spec = %{
       id: {Favn.Runtime.Coordinator, runtime_state.run_id},
@@ -116,17 +129,24 @@ defmodule Favn.Runtime.Manager do
         %{
           run
           | status: :error,
+            event_seq: run.event_seq + 1,
             finished_at: DateTime.utc_now(),
             error: {:run_process_crash, reason}
         }
 
-      :ok = Favn.Storage.put_run(failed)
+      case Favn.Storage.put_run(failed) do
+        :ok ->
+          _ =
+            Favn.Runtime.Events.publish_run_event(run_id, :run_failed, %{
+              seq: failed.event_seq,
+              payload: %{error: failed.error}
+            })
 
-      _ =
-        Favn.Runtime.Events.publish_run_event(run_id, :run_failed, %{
-          seq: failed.event_seq + 1,
-          payload: %{error: failed.error}
-        })
+          :ok
+
+        {:error, _reason} ->
+          :ok
+      end
 
       :ok
     else

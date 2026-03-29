@@ -33,12 +33,7 @@ defmodule Favn.Runtime.Engine do
         if run.status == :ok, do: {:ok, run}, else: {:error, run}
 
       {:error, :not_found} ->
-        if timed_out?(start_ms, timeout) do
-          {:error, :timeout}
-        else
-          Process.sleep(poll_interval_ms)
-          do_await_run(run_id, start_ms, timeout, poll_interval_ms)
-        end
+        {:error, :not_found}
 
       {:error, reason} ->
         {:error, reason}

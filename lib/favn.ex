@@ -704,6 +704,7 @@ defmodule Favn do
 
     * `{:ok, %Favn.Run{status: :ok}}` on successful completion
     * `{:error, %Favn.Run{status: :error}}` when the run fails
+    * `{:error, :not_found}` when the run ID does not exist
     * `{:error, :timeout}` when timeout elapses before terminal state
     * `{:error, reason}` for storage retrieval failures
   """

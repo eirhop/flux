@@ -169,6 +169,10 @@ defmodule Favn.RunnerTest do
     assert {:error, :not_found} = Favn.get_run("missing-run-id")
   end
 
+  test "await_run/2 returns :not_found immediately for unknown run ids" do
+    assert {:error, :not_found} = Favn.await_run("missing-run-id")
+  end
+
   test "returns invalid run params as canonical error payload from run/2" do
     assert {:error, :invalid_run_params} = Favn.run({RunnerAssets, :final}, params: :not_a_map)
   end

@@ -26,18 +26,17 @@ defmodule Favn.Runtime.Coordinator do
 
   @impl true
   def init(opts) do
-    send(self(), :start_run)
     {:ok, %{state: Keyword.fetch!(opts, :state)}}
   end
 
   @impl true
-  def handle_info(:start_run, %{state: state} = data) do
+  def handle_cast(:start_run, %{state: state} = data) do
     _result = start_and_execute(state)
     {:stop, :normal, data}
   end
 
   @impl true
-  def handle_info(msg, data) when msg != :start_run do
+  def handle_info(_msg, data) do
     {:noreply, data}
   end
 
